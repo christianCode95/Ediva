@@ -1,0 +1,6 @@
+node_modules/
+Ediva/dist/
+Ediva/data/
+Ediva/.env
+Ediva/.env.*
+!Ediva/.env.example

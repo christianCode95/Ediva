@@ -1,0 +1,24 @@
+{
+  "name": "ediva-workspace",
+  "private": true,
+  "workspaces": [
+    "Ediva"
+  ],
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently --kill-others -n api,web -c blue,magenta \"npm run dev:api --workspace=ediva\" \"npm run dev:web --workspace=ediva\"",
+    "build": "npm run build --workspace=ediva",
+    "lint": "npm run lint --workspace=ediva",
+    "preview": "npm run preview --workspace=ediva",
+    "start": "npm run start --workspace=ediva"
+  },
+  "allowScripts": {
+    "argon2@0.45.1": true,
+    "better-sqlite3@12.11.1": true
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}
