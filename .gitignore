@@ -1,6 +1,7 @@
 node_modules/
 /.codex-github-sync-*/
 Ediva/dist/
+Ediva/dist-pages/
 Ediva/data/
 Ediva/.env
 Ediva/.env.*

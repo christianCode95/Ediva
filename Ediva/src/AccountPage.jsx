@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
+import { appLink, assetLink } from './site-links.js'
 import './AccountPage.css'
 
 const supportEmail = 'edivacursos@gmail.com'
-const brandImage = '/1792417085611.webp'
+const brandImage = assetLink('/1792417085611.webp')
 
 function AccountBrand() {
   return (
-    <a className="account-brand" href="/" aria-label="EDIVA, página inicial">
+    <a className="account-brand" href={appLink('/')} aria-label="EDIVA, página inicial">
       <img src={brandImage} alt="" />
       <span>
         <strong>EDIVA</strong>
@@ -27,8 +28,8 @@ function AccountFrame({ children }) {
             <h1>Aprenda no seu ritmo. Transforme o seu futuro.</h1>
             <p>Cursos online, práticos e acessíveis para desenvolver novas habilidades.</p>
           </div>
-          <img className="account-promo-image" src="/1792417161847.webp" alt="Materiais de estudo da EDIVA" />
-          <a className="account-home-link" href="/">← Voltar para o site</a>
+          <img className="account-promo-image" src={assetLink('/1792417161847.webp')} alt="Materiais de estudo da EDIVA" />
+          <a className="account-home-link" href={appLink('/')}>← Voltar para o site</a>
         </section>
 
         <section className="account-card" aria-labelledby="account-title">
@@ -36,9 +37,9 @@ function AccountFrame({ children }) {
           {children}
           <p className="account-privacy-note">
             Seus dados são usados para manter sua conta. Leia a{' '}
-            <a href="/privacidade">Política de Privacidade</a>.
+            <a href={appLink('/privacidade')}>Política de Privacidade</a>.
           </p>
-          <a className="account-mobile-home-link" href="/">← Voltar para o site</a>
+          <a className="account-mobile-home-link" href={appLink('/')}>← Voltar para o site</a>
         </section>
       </div>
     </main>
@@ -82,7 +83,7 @@ export default function AccountPage({ mode }) {
         return
       }
 
-      window.location.replace(returnPath)
+      window.location.replace(appLink(returnPath))
     } catch {
       setError('Não foi possível conectar ao servidor. Tente novamente em instantes.')
     } finally {
@@ -176,9 +177,9 @@ export default function AccountPage({ mode }) {
       )}
 
       {isSignup ? (
-        <p className="account-switch">Já tem uma conta? <a href={`/entrar${authRedirectQuery}`}>Entrar</a></p>
+        <p className="account-switch">Já tem uma conta? <a href={appLink(`/entrar${authRedirectQuery}`)}>Entrar</a></p>
       ) : (
-        <p className="account-switch">Ainda não tem conta? <a href={`/cadastro${authRedirectQuery}`}>Criar conta</a></p>
+        <p className="account-switch">Ainda não tem conta? <a href={appLink(`/cadastro${authRedirectQuery}`)}>Criar conta</a></p>
       )}
     </AccountFrame>
   )
@@ -198,7 +199,7 @@ export function AccountHome() {
         if (!active) return
         if (!response.ok) throw new Error(result.error || 'Não foi possível abrir sua conta.')
         if (!result.user) {
-          window.location.replace('/entrar')
+          window.location.replace(appLink('/entrar'))
           return
         }
         setUser(result.user)
@@ -218,7 +219,7 @@ export function AccountHome() {
     try {
       const response = await fetch('/api/auth/logout', { method: 'POST' })
       if (!response.ok) throw new Error('Não foi possível encerrar a sessão.')
-      window.location.replace('/')
+      window.location.replace(appLink('/'))
     } catch {
       setError('Não foi possível encerrar a sessão. Tente novamente.')
       setSigningOut(false)
@@ -241,20 +242,20 @@ export function AccountHome() {
             <strong>Escolha um curso para acompanhar</strong>
             <p>Seu progresso fica salvo na conta. Conclua os módulos, faça a avaliação e obtenha seu certificado.</p>
             <div className="account-course-links">
-              <a href="/estudar/adm">
+              <a href={appLink('/estudar/adm')}>
                 <strong>Administração</strong>
                 <span>10 módulos · questionário final · certificado</span>
               </a>
-              <a href="/estudar/rh">
+              <a href={appLink('/estudar/rh')}>
                 <strong>Gestão de Recursos Humanos</strong>
                 <span>10 módulos · questionário final · certificado</span>
               </a>
-              <a href="/estudar/auxiliar-financeiro">
+              <a href={appLink('/estudar/auxiliar-financeiro')}>
                 <strong>Auxiliar Financeiro</strong>
                 <span>10 módulos · questionário final · certificado</span>
               </a>
             </div>
-            <a className="button button-primary" href="/cursos">Conhecer todos os cursos</a>
+            <a className="button button-primary" href={appLink('/cursos')}>Conhecer todos os cursos</a>
           </div>
           <button className="account-signout" disabled={signingOut} onClick={handleSignOut} type="button">
             {signingOut ? 'Saindo…' : 'Sair da conta'}
@@ -289,7 +290,7 @@ export function PrivacyPage() {
         <h2>Seus pedidos e contato</h2>
         <p>Para solicitar acesso, correção ou exclusão dos dados da sua conta, escreva para <a href={`mailto:${supportEmail}`}>{supportEmail}</a> usando o e-mail cadastrado. A equipe poderá pedir uma confirmação razoável de identidade antes de atender ao pedido.</p>
 
-        <a className="button button-primary privacy-home-link" href="/">Voltar para a EDIVA</a>
+        <a className="button button-primary privacy-home-link" href={appLink('/')}>Voltar para a EDIVA</a>
       </article>
     </main>
   )

@@ -1,3 +1,4 @@
+import { appLink, assetLink } from './site-links.js'
 import './AboutPage.css'
 
 function ArrowIcon() {
@@ -20,14 +21,14 @@ export default function AboutPage() {
             acessível, simples e prático para quem deseja se preparar para o mercado de trabalho.
           </p>
           <div className="ediva-about-actions">
-            <a className="button button-primary" href="/cursos">Conheça os cursos <ArrowIcon /></a>
-            <a className="button button-outline" href="/como-funciona">Como funciona</a>
+            <a className="button button-primary" href={appLink('/cursos')}>Conheça os cursos <ArrowIcon /></a>
+            <a className="button button-outline" href={appLink('/como-funciona')}>Como funciona</a>
           </div>
         </div>
 
         <div className="ediva-about-visual">
           <p className="ediva-about-visual-kicker">ESCOLA DIGITAL DE CURSOS LIVRES</p>
-          <img src="/1792417122513.webp" alt="" width="400" height="400" decoding="async" />
+          <img src={assetLink('/1792417122513.webp')} alt="" width="400" height="400" decoding="async" />
           <p className="ediva-about-visual-title">Conhecimento para dar o próximo passo.</p>
           <ul>
             <li>Linguagem clara</li>
@@ -121,7 +122,7 @@ export default function AboutPage() {
           <p className="section-eyebrow">SEU PRÓXIMO PASSO</p>
           <h2 id="about-cta-title">Comece a construir novas possibilidades.</h2>
         </div>
-        <a className="button button-primary" href="/cursos">Conheça os cursos <ArrowIcon /></a>
+        <a className="button button-primary" href={appLink('/cursos')}>Conheça os cursos <ArrowIcon /></a>
       </section>
     </div>
   )

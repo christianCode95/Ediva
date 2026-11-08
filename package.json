@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "concurrently --kill-others -n api,web -c blue,magenta \"npm run dev:api --workspace=ediva\" \"npm run dev:web --workspace=ediva\"",
     "build": "npm run build --workspace=ediva",
+    "build:pages": "npm run build:pages --workspace=ediva",
     "lint": "npm run lint --workspace=ediva",
     "preview": "npm run preview --workspace=ediva",
     "start": "npm run start --workspace=ediva"

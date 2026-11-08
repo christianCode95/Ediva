@@ -32,7 +32,7 @@ if (!['development', 'production'].includes(process.env.NODE_ENV)) {
 const isProduction = process.env.NODE_ENV === 'production'
 const sessionCookieName = 'ediva_session'
 const sessionDurationSeconds = 60 * 60 * 24 * 30
-const allowedOrigins = (process.env.EDIVA_ALLOWED_ORIGINS || '')
+const allowedOrigins = (process.env.EDIVA_ALLOWED_ORIGINS || process.env.RENDER_EXTERNAL_URL || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)

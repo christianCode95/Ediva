@@ -4,6 +4,8 @@ import AccountPage, { AccountHome, PrivacyPage } from './AccountPage.jsx'
 import CourseLearningPage from './CourseLearningPage.jsx'
 import CourseMaterialsPage from './CourseMaterialsPage.jsx'
 import AboutPage from './AboutPage.jsx'
+import { modulesInCourse } from '#course-materials'
+import { appLink, assetLink, currentRoutePath, isPagesBuild, isStudentRoute } from './site-links.js'
 import './App.css'
 
 const logoImage = '/1792417085611.webp'
@@ -25,50 +27,6 @@ const pageTitles = {
   '/estudar/politica': 'Estudar Política e Cidadania',
   '/privacidade': 'Privacidade',
 }
-const coursePdfAssets = import.meta.glob('./Cursos/**/*.pdf', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-})
-const courseVideoAssets = import.meta.glob('./Cursos/**/VIDEOS/*.mp4', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-})
-
-function modulesInCourse(folder, titles) {
-  const modules = new Map(Object.entries(coursePdfAssets)
-    .filter(([path]) => path.startsWith(`./Cursos/${folder}/`))
-    .map(([path, url], index) => {
-      const filename = path.split('/').at(-1)
-      const number = Number(filename.match(/Modulo_(\d+)_/i)?.[1]) || index + 1
-      const fallbackTitle = filename
-        .replace(/^EDIVA.*?Modulo_\d+_/i, '')
-        .replace(/\.pdf$/i, '')
-        .replace(/-1$/, '')
-        .replaceAll('_', ' ')
-      return [number, {
-        number,
-        title: titles[number - 1] || fallbackTitle,
-        url,
-      }]
-    }))
-
-  Object.entries(courseVideoAssets)
-    .filter(([path]) => path.startsWith(`./Cursos/${folder}/VIDEOS/`))
-    .forEach(([path, videoUrl]) => {
-      const number = Number(path.split('/').at(-1).match(/^(\d+)\.mp4$/i)?.[1])
-      if (!Number.isInteger(number) || number < 1) return
-      const module = modules.get(number) || {
-        number,
-        title: titles[number - 1] || 'Videoaula do módulo ' + String(number).padStart(2, '0'),
-      }
-      modules.set(number, { ...module, videoUrl })
-    })
-
-  return [...modules.values()].sort((left, right) => left.number - right.number)
-}
-
 const courses = [
   {
     id: 'adm',
@@ -266,13 +224,13 @@ function ModulesIcon() {
 }
 
 function App() {
-  const routePath = window.location.pathname.replace(/\/+$/, '') || '/'
+  const routePath = currentRoutePath()
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [modal, setModal] = useState(null)
   const [signedInUser, setSignedInUser] = useState(null)
-  const [accountChecked, setAccountChecked] = useState(false)
+  const [accountChecked, setAccountChecked] = useState(isPagesBuild)
   const menuRef = useRef(null)
   const menuToggleRef = useRef(null)
   const searchInputRef = useRef(null)
@@ -315,6 +273,7 @@ function App() {
   }, [searchOpen])
 
   useEffect(() => {
+    if (isPagesBuild) return undefined
     let active = true
     fetch('/api/auth/me')
       .then((response) => response.json())
@@ -404,6 +363,23 @@ function App() {
     document.title = `${pageTitles[routePath] || 'Página não encontrada'} | EDIVA`
   }, [routePath])
 
+  useEffect(() => {
+    if (isPagesBuild && isStudentRoute(routePath)) {
+      window.location.replace(appLink(routePath + window.location.search + window.location.hash))
+    }
+  }, [routePath])
+
+  if (isPagesBuild && isStudentRoute(routePath)) {
+    return (
+      <main className="route-not-found">
+        <p role="status">Abrindo a área do aluno…</p>
+        <a className="button button-primary" href={appLink(routePath + window.location.search + window.location.hash)}>
+          Continuar para a área do aluno
+        </a>
+      </main>
+    )
+  }
+
   if (routePath === '/entrar') return <AccountPage mode="login" />
   if (routePath === '/cadastro') return <AccountPage mode="signup" />
   if (routePath === '/conta') return <AccountHome />
@@ -420,9 +396,9 @@ function App() {
   return (
     <main>
       <header className="site-header">
-        <a className="brand" href="/" aria-label="EDIVA, início" onClick={closeMenu}>
+        <a className="brand" href={appLink('/')} aria-label="EDIVA, início" onClick={closeMenu}>
           <span className="brand-symbol" aria-hidden="true">
-            <img src={logoImage} alt="" />
+            <img src={assetLink(logoImage)} alt="" />
           </span>
           <span className="brand-copy">
             <strong>EDIVA</strong>
@@ -450,24 +426,24 @@ function App() {
           className={`main-nav${menuOpen ? ' is-open' : ''}`}
           aria-label="Navegação principal"
         >
-          <a className={routePath === '/' ? 'active' : undefined} aria-current={routePath === '/' ? 'page' : undefined} href="/" onClick={closeMenu}>Início</a>
-          <a className={routePath === '/cursos' ? 'active' : undefined} aria-current={routePath === '/cursos' ? 'page' : undefined} href="/cursos" onClick={closeMenu}>Cursos</a>
-          <a className={routePath === '/sobre-a-ediva' ? 'active' : undefined} aria-current={routePath === '/sobre-a-ediva' ? 'page' : undefined} href="/sobre-a-ediva" onClick={closeMenu}>Sobre a EDIVA</a>
-          <a className={routePath === '/como-funciona' ? 'active' : undefined} aria-current={routePath === '/como-funciona' ? 'page' : undefined} href="/como-funciona" onClick={closeMenu}>Como funciona</a>
-          <a className={routePath === '/blog' ? 'active' : undefined} aria-current={routePath === '/blog' ? 'page' : undefined} href="/blog" onClick={closeMenu}>Blog</a>
-          <a className={routePath === '/contato' ? 'active' : undefined} aria-current={routePath === '/contato' ? 'page' : undefined} href="/contato" onClick={closeMenu}>Contato</a>
+          <a className={routePath === '/' ? 'active' : undefined} aria-current={routePath === '/' ? 'page' : undefined} href={appLink('/')} onClick={closeMenu}>Início</a>
+          <a className={routePath === '/cursos' ? 'active' : undefined} aria-current={routePath === '/cursos' ? 'page' : undefined} href={appLink('/cursos')} onClick={closeMenu}>Cursos</a>
+          <a className={routePath === '/sobre-a-ediva' ? 'active' : undefined} aria-current={routePath === '/sobre-a-ediva' ? 'page' : undefined} href={appLink('/sobre-a-ediva')} onClick={closeMenu}>Sobre a EDIVA</a>
+          <a className={routePath === '/como-funciona' ? 'active' : undefined} aria-current={routePath === '/como-funciona' ? 'page' : undefined} href={appLink('/como-funciona')} onClick={closeMenu}>Como funciona</a>
+          <a className={routePath === '/blog' ? 'active' : undefined} aria-current={routePath === '/blog' ? 'page' : undefined} href={appLink('/blog')} onClick={closeMenu}>Blog</a>
+          <a className={routePath === '/contato' ? 'active' : undefined} aria-current={routePath === '/contato' ? 'page' : undefined} href={appLink('/contato')} onClick={closeMenu}>Contato</a>
           <div className="mobile-account-actions">
             {accountChecked && (signedInUser ? (
               <a
                 className="button button-outline account-greeting"
-                href="/conta"
+                href={appLink('/conta')}
                 onClick={closeMenu}
                 aria-label={`Olá, ${firstName}. Abrir minha conta`}
               >Olá, {firstName}</a>
             ) : (
               <>
-                <a className="button button-outline" href="/entrar" onClick={closeMenu}>Entrar</a>
-                <a className="button button-primary" href="/cadastro" onClick={closeMenu}>Criar conta</a>
+                <a className="button button-outline" href={appLink('/entrar')} onClick={closeMenu}>Entrar</a>
+                <a className="button button-primary" href={appLink('/cadastro')} onClick={closeMenu}>Criar conta</a>
               </>
             ))}
           </div>
@@ -501,13 +477,13 @@ function App() {
           {accountChecked && (signedInUser ? (
             <a
               className="button button-outline account-greeting"
-              href="/conta"
+              href={appLink('/conta')}
               aria-label={`Olá, ${firstName}. Abrir minha conta`}
             >Olá, {firstName}</a>
           ) : (
             <>
-              <a className="button button-outline" href="/entrar">Entrar</a>
-              <a className="button button-primary" href="/cadastro">Criar conta</a>
+              <a className="button button-outline" href={appLink('/entrar')}>Entrar</a>
+              <a className="button button-primary" href={appLink('/cadastro')}>Criar conta</a>
             </>
           ))}
         </div>
@@ -518,7 +494,7 @@ function App() {
         <h1 className="sr-only">Aprenda. Pratique. Transforme.</h1>
         <img
           className="hero-image"
-          src="/1792417090917.webp"
+          src={assetLink('/1792417090917.webp')}
           alt="Materiais de estudo ao lado de um computador com a identidade visual da EDIVA."
           fetchPriority="high"
         />
@@ -527,7 +503,7 @@ function App() {
           <p>Cursos 100% online, práticos e acessíveis para você desenvolver novas habilidades.</p>
         </div>
         <div className="hero-actions">
-          <a className="button button-primary hero-primary" href="/cursos">
+          <a className="button button-primary hero-primary" href={appLink('/cursos')}>
             <span className="desktop-label">Conheça nossos cursos</span>
             <span className="mobile-label">Ver cursos</span>
             <ArrowIcon />
@@ -558,7 +534,7 @@ function App() {
           {filteredCourses.map((course) => (
             <article className="course-card" key={course.title}>
               <div className="course-overview">
-                <img className="course-icon" src={course.image} alt="" loading="lazy" decoding="async" />
+                <img className="course-icon" src={assetLink(course.image)} alt="" loading="lazy" decoding="async" />
                 <div className="course-copy">
                   <h2>{course.title}</h2>
                   <p>{course.description}</p>
@@ -571,7 +547,7 @@ function App() {
               {course.id && course.modules.length ? (
                 <a
                   className="course-link"
-                  href={`/estudar/${course.id}`}
+                  href={appLink(`/estudar/${course.id}`)}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`${routePath === '/' ? 'Ver' : 'Acessar'} curso ${course.title} (abre em nova aba)`}
@@ -612,7 +588,7 @@ function App() {
             {benefits.map((benefit) => (
               <div className={`benefit-item ${benefit.tone}`} key={benefit.title}>
                 <span className="benefit-symbol" aria-hidden="true">
-                  <img src={benefit.image} alt="" loading="lazy" decoding="async" />
+                  <img src={assetLink(benefit.image)} alt="" loading="lazy" decoding="async" />
                 </span>
                 <div>
                   <h3>{benefit.title}</h3>
@@ -641,7 +617,7 @@ function App() {
           <a className="button button-primary" href="#cursos">Conheça os cursos <ArrowIcon /></a>
         </div>
         <div className="about-highlight">
-          <img src="/1792417161847.webp" alt="" loading="lazy" decoding="async" />
+          <img src={assetLink('/1792417161847.webp')} alt="" loading="lazy" decoding="async" />
           <p>Aprenda no seu ritmo,<br /><strong>de onde estiver.</strong></p>
         </div>
       </section>
@@ -658,7 +634,7 @@ function App() {
           {benefits.map((benefit) => (
             <div className={`benefit-item ${benefit.tone}`} key={benefit.title}>
               <span className="benefit-symbol" aria-hidden="true">
-                <img src={benefit.image} alt="" loading="lazy" decoding="async" />
+                <img src={assetLink(benefit.image)} alt="" loading="lazy" decoding="async" />
               </span>
               <div>
                 <h2>{benefit.title}</h2>
@@ -684,7 +660,7 @@ function App() {
             <p>Estude pelos módulos do curso usando computador, tablet ou celular.</p>
           </article>
         </div>
-        <a className="button button-primary how-courses-link" href="/cursos">Explorar cursos <ArrowIcon /></a>
+        <a className="button button-primary how-courses-link" href={appLink('/cursos')}>Explorar cursos <ArrowIcon /></a>
       </section>
       )}
 
@@ -701,7 +677,7 @@ function App() {
             <h2>Estamos preparando novidades</h2>
             <p>Enquanto isso, explore nossos cursos e comece a desenvolver novas habilidades no seu ritmo.</p>
           </div>
-          <a className="button button-primary" href="/cursos">Explorar cursos <ArrowIcon /></a>
+          <a className="button button-primary" href={appLink('/cursos')}>Explorar cursos <ArrowIcon /></a>
         </article>
       </section>
       )}
@@ -723,22 +699,22 @@ function App() {
         <section className="route-not-found">
           <p className="section-eyebrow">PÁGINA NÃO ENCONTRADA</p>
           <h1>Não encontramos essa página.</h1>
-          <a className="button button-primary" href="/">Voltar ao início</a>
+          <a className="button button-primary" href={appLink('/')}>Voltar ao início</a>
         </section>
       )}
 
       <footer className="site-footer">
-        <a className="footer-brand" href="/" aria-label="EDIVA, voltar ao início">
-          <img src={logoImage} alt="" />
+        <a className="footer-brand" href={appLink('/')} aria-label="EDIVA, voltar ao início">
+          <img src={assetLink(logoImage)} alt="" />
           <span>EDIVA</span>
         </a>
         <nav aria-label="Navegação do rodapé">
-          <a href="/cursos">Cursos</a>
-          <a href="/sobre-a-ediva">Sobre a EDIVA</a>
-          <a href="/como-funciona">Como funciona</a>
-          <a href="/blog">Blog</a>
-          <a href="/privacidade">Privacidade</a>
-          <a href="/contato">Contato</a>
+          <a href={appLink('/cursos')}>Cursos</a>
+          <a href={appLink('/sobre-a-ediva')}>Sobre a EDIVA</a>
+          <a href={appLink('/como-funciona')}>Como funciona</a>
+          <a href={appLink('/blog')}>Blog</a>
+          <a href={appLink('/privacidade')}>Privacidade</a>
+          <a href={appLink('/contato')}>Contato</a>
         </nav>
         <p>© {new Date().getFullYear()} EDIVA. Escola Digital de Cursos Livres.</p>
       </footer>
@@ -765,8 +741,8 @@ function App() {
               aria-label="Fechar janela"
               onClick={closeModal}
             >×</button>
-            <a className="modal-brand" href="/" onClick={closeModal}>
-              <img src={logoImage} alt="" />
+            <a className="modal-brand" href={appLink('/')} onClick={closeModal}>
+              <img src={assetLink(logoImage)} alt="" />
               <span>EDIVA</span>
             </a>
             <p className="modal-eyebrow">DETALHES DO CURSO</p>
@@ -800,7 +776,7 @@ function App() {
                 {modal.course.id && (
                   <a
                     className="button button-primary modal-action"
-                    href={`/estudar/${modal.course.id}`}
+                    href={appLink(`/estudar/${modal.course.id}`)}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={closeModal}

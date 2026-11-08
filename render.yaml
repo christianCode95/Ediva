@@ -7,8 +7,6 @@ services:
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
-    domains:
-      - ediva.com.br
     disk:
       name: ediva-data
       mountPath: /var/data
@@ -18,9 +16,13 @@ services:
         value: 22.12.0
       - key: NODE_ENV
         value: production
-      - key: EDIVA_ALLOWED_ORIGINS
-        value: https://ediva.com.br,https://www.ediva.com.br
+      - key: VITE_PUBLIC_SITE_URL
+        value: https://christiancode95.github.io/Ediva/
       - key: EDIVA_DB_PATH
         value: /var/data/ediva.sqlite
+      - key: EDIVA_COURSE_ANSWER_KEYS_PATH
+        value: /var/data/course-answer-keys.json
+      - key: EDIVA_COURSE_ANSWER_KEYS_JSON
+        sync: false
       - key: EDIVA_TRUST_CLOUDFLARE
         value: "true"

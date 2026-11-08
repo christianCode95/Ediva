@@ -1,0 +1,46 @@
+name: Publicar EDIVA no GitHub Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      VITE_STUDENT_APP_URL: ${{ vars.STUDENT_APP_URL }}
+      VITE_PAGES_BASE: /${{ github.event.repository.name }}/
+    steps:
+      - name: Baixar o projeto
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Preparar Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22.12.0'
+          cache: npm
+      - name: Instalar dependências do build estático
+        run: npm ci --ignore-scripts
+      - name: Conferir disponibilidade da área do aluno
+        run: node Ediva/scripts/verify-student-app.mjs
+      - name: Gerar páginas públicas e links da área do aluno
+        run: npm run build:pages
+      - name: Configurar Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - name: Enviar arquivos públicos
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: Ediva/dist-pages
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

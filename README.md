@@ -28,42 +28,27 @@ Após cadastro ou login, o cabeçalho do site mostra “Olá, [primeiro nome]”
 
 ## Preparar publicação
 
-O backend serve o build do site e a API no mesmo domínio. Não publique apenas `Ediva/dist` no GitHub Pages: ele publica arquivos estáticos e não executa este servidor Node nem mantém o banco SQLite. O GitHub pode continuar sendo o repositório do código, conectado a uma hospedagem que rode Node.
+O site completo usa dois endereços: o GitHub Pages publica as páginas de apresentação e o catálogo; uma hospedagem Node publica toda a área do aluno, os PDFs, os vídeos e a API no mesmo domínio. Os links de entrar, criar conta e acessar os cursos encaminham o aluno ao servidor. Assim, login, progresso, avaliações e certificados usam a mesma origem e mantêm os cookies atuais.
 
-Este projeto inclui `render.yaml` como configuração inicial para publicar pelo Render conectado ao repositório GitHub. Ela configura o domínio `ediva.com.br`, o serviço Node, HTTPS e um disco persistente para as contas. O plano precisa aceitar disco persistente; o plano gratuito do Render não aceita esse disco.
+### Área do aluno no Render
 
-1. Envie o projeto para um repositório GitHub e, no Render, crie um Blueprint a partir desse repositório e do arquivo `render.yaml`.
+O `render.yaml` prepara um serviço Node no plano `0.5c-512mb`, com um disco persistente de 1 GB para o SQLite. Essa configuração exige um plano pago compatível com disco; confira e aprove os custos na conta do Render antes de criar o serviço. O arquivo não configura um domínio comprado: a instalação inicial usa o endereço HTTPS `onrender.com` fornecido pelo Render.
 
-2. No painel do Render, confira o domínio personalizado e siga os registros DNS indicados para `ediva.com.br`. O Render provisiona o HTTPS depois que o DNS apontar corretamente.
+1. Conecte o repositório ao Render e revise o Blueprint `render.yaml`.
+2. Forneça o conteúdo do arquivo privado `Ediva/data/course-answer-keys.json` na variável secreta `EDIVA_COURSE_ANSWER_KEYS_JSON` solicitada durante a configuração. Não envie o arquivo ao GitHub. Como alternativa, forneça um arquivo privado no servidor e configure `EDIVA_COURSE_ANSWER_KEYS_PATH`.
+3. O serviço usa `npm ci --include=dev && npm run build` para compilar e `npm start` para iniciar. O banco fica em `/var/data/ediva.sqlite` no disco persistente.
+4. A API usa `RENDER_EXTERNAL_URL`, fornecida pelo Render, como origem permitida. `EDIVA_ALLOWED_ORIGINS`, quando definida, tem prioridade e aceita origens separadas por vírgula. Para outra hospedagem, configure essa variável com o endereço HTTPS da própria área do aluno, além de `NODE_ENV=production` e `EDIVA_DB_PATH` em armazenamento persistente.
+5. `VITE_PUBLIC_SITE_URL=https://christiancode95.github.io/Ediva/` faz os links públicos da área do aluno voltarem ao Pages. Esse valor é público e faz parte do build. Gabaritos e segredos nunca devem usar nomes começando com `VITE_`.
 
-3. Para uma execução manual, as dependências e o build são:
+O servidor usa `PORT` fornecida pela hospedagem e escuta em `0.0.0.0`. Faça cópias de segurança do volume. O `render.yaml` mantém a leitura do IP encaminhado pelo proxy Cloudflare do Render; em outra hospedagem, configure confiança em proxy somente conforme a infraestrutura usada.
 
-   ```bash
-   npm ci --include=dev
-   npm run build
-   ```
+### Páginas públicas no GitHub Pages
 
-4. Para outra hospedagem Node, configure as variáveis abaixo no painel do serviço e monte armazenamento persistente para o SQLite:
+Depois de confirmar que a área do aluno está online, crie a variável de repositório `STUDENT_APP_URL` em Settings → Secrets and variables → Actions → Variables, com o endereço HTTPS real do servidor, sem credenciais. Ela é usada no build como `VITE_STUDENT_APP_URL` para gerar os links de acesso aos cursos.
 
-   ```text
-   NODE_ENV=production
-   EDIVA_ALLOWED_ORIGINS=https://ediva.com.br,https://www.ediva.com.br
-   EDIVA_DB_PATH=/caminho/do/volume/ediva.sqlite
-   ```
+Em Settings → Pages, escolha GitHub Actions como origem. O workflow `Publicar EDIVA no GitHub Pages` começa com execução manual: em Actions, execute-o após configurar `STUDENT_APP_URL`. Ele confere se a API da área do aluno está disponível antes de compilar. Sem essa variável válida e um servidor disponível, o workflow não publica uma versão com links incompletos. O build público usa a base `/Ediva/`, gera as rotas conhecidas e não inclui o banco, os gabaritos nem os arquivos de aulas; esses materiais são servidos pela área do aluno.
 
-   `EDIVA_ALLOWED_ORIGINS` aceita mais de uma origem separada por vírgula e não deve conter barras no final. A API exige origens permitidas em produção.
-
-5. Inicie o servidor:
-
-   ```bash
-   npm start
-   ```
-
-   O servidor usa a porta fornecida pela hospedagem em `PORT` e escuta em `0.0.0.0`.
-
-O `render.yaml` ativa `EDIVA_TRUST_CLOUDFLARE` para usar o IP enviado pelo proxy Cloudflare do Render nos limites de tentativas. Em outra hospedagem, configure a leitura do IP encaminhado apenas quando o serviço estiver atrás de um proxy controlado pela plataforma.
-
-O SQLite precisa ficar em armazenamento persistente; o disco temporário de contêineres pode ser apagado em uma nova publicação. Faça cópias de segurança do volume. Configure no DNS apenas os registros que a hospedagem indicar para conectar `ediva.com.br` ao site. Para validar o build localmente com a API ativa, use `npm run preview` após `npm run build`.
+Para validar o servidor localmente com a API ativa, use `npm run preview` após `npm run build`. A preparação dos arquivos e do workflow não cria serviços nem confirma uma publicação.
 
 ## Conferir o código
 

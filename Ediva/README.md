@@ -50,13 +50,19 @@ Forneça esse arquivo separadamente ao servidor, com acesso restrito. Após alte
 
 ## Produção
 
-Gere os arquivos do site e inicie o servidor Node.js:
+O GitHub Pages publica as páginas públicas e o catálogo. A área do aluno fica em um servidor Node separado, que serve o frontend dos cursos, os materiais e a API no mesmo domínio. Entrar, cadastrar e estudar levam a esse servidor, mantendo login, progresso e avaliações com os cookies atuais.
+
+No servidor Node, gere os arquivos e inicie a aplicação:
 
 ```bash
 npm run build
 npm start
 ```
 
-Configure no ambiente da hospedagem `NODE_ENV=production` e `EDIVA_ALLOWED_ORIGINS`. A hospedagem também precisa manter o banco SQLite em armazenamento persistente; defina `EDIVA_DB_PATH` para esse local.
+Configure `NODE_ENV=production`, um caminho persistente em `EDIVA_DB_PATH` e os gabaritos privados descritos acima. No Render, `RENDER_EXTERNAL_URL` define automaticamente a origem permitida da área do aluno. Em outra hospedagem, defina `EDIVA_ALLOWED_ORIGINS` com a origem HTTPS do próprio servidor; um valor explícito sempre tem prioridade sobre o endereço automático do Render.
 
-O GitHub guarda o código, mas não executa a API Node.js nem mantém o banco SQLite. Para cadastro e login funcionarem no domínio, publique o app em uma hospedagem que execute Node.js e tenha armazenamento persistente.
+O Blueprint da raiz usa um plano pago `0.5c-512mb` e disco persistente de 1 GB, sem depender da compra de domínio. Revise os custos antes de criar o serviço. `VITE_PUBLIC_SITE_URL=https://christiancode95.github.io/Ediva/` configura os links públicos do servidor para voltarem ao Pages e precisa estar disponível durante o build.
+
+Depois que o servidor estiver publicado, configure no repositório GitHub a variável `STUDENT_APP_URL` com sua URL HTTPS real e execute manualmente o workflow `Publicar EDIVA no GitHub Pages`. O workflow confere a disponibilidade da API antes do build. A variável é exposta ao build como `VITE_STUDENT_APP_URL`; ela contém apenas um endereço público. O build de Pages usa `/Ediva/` como base e omite os arquivos PDF e de vídeo, que continuam na área do aluno. Gabaritos, senhas e outros segredos nunca devem ser colocados em variáveis `VITE_` nem no repositório.
+
+Consulte o README da raiz para o passo a passo das duas publicações. Preparar essa configuração não cria um serviço no Render nem confirma que os endereços já estejam online.

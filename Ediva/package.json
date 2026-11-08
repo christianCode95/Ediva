@@ -12,6 +12,7 @@
     "dev:api": "cross-env NODE_ENV=development node --watch server/index.js",
     "start": "node server/index.js",
     "build": "vite build",
+    "build:pages": "vite build --mode pages --outDir dist-pages && node scripts/build-pages-routes.mjs",
     "lint": "eslint .",
     "preview": "cross-env NODE_ENV=development node server/index.js"
   },

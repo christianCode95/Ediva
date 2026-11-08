@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import CourseModuleCard from './CourseModuleCard.jsx'
 import CourseStudyLayout from './CourseStudyLayout.jsx'
 import ModuleStudyMaterials from './ModuleStudyMaterials.jsx'
+import { appLink } from './site-links.js'
 import './CourseLearningPage.css'
 
 function formatDate(timestamp) {
@@ -182,15 +183,15 @@ export default function CourseLearningPage({ course }) {
     return (
       <main className="learning-page">
         <section className="learning-message">
-          <a className="learning-brand" href="/">EDIVA</a>
+          <a className="learning-brand" href={appLink('/')}>EDIVA</a>
           <h1>{authRequired ? 'Entre para acompanhar seu curso' : 'Não foi possível abrir o curso'}</h1>
           <p role="alert">{error}</p>
           {authRequired && (
-            <a className="learning-button" href={'/entrar?redirect=' + encodeURIComponent('/estudar/' + course.id)}>
+            <a className="learning-button" href={appLink('/entrar?redirect=' + encodeURIComponent('/estudar/' + course.id))}>
               Entrar na conta
             </a>
           )}
-          <a className="learning-back-link" href="/cursos">Voltar aos cursos</a>
+          <a className="learning-back-link" href={appLink('/cursos')}>Voltar aos cursos</a>
         </section>
       </main>
     )

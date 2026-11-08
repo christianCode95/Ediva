@@ -1,3 +1,4 @@
+import { appLink } from './site-links.js'
 import './CourseLearningPage.css'
 
 export default function CourseStudyLayout({ course, intro, children }) {
@@ -5,10 +6,10 @@ export default function CourseStudyLayout({ course, intro, children }) {
     <main className="learning-page">
       <a className="learning-skip-link" href="#learning-main">Pular para o conteúdo do curso</a>
       <header className="learning-header">
-        <a className="learning-brand" href="/" aria-label="EDIVA, página inicial">EDIVA</a>
+        <a className="learning-brand" href={appLink('/')} aria-label="EDIVA, página inicial">EDIVA</a>
         <nav aria-label="Navegação da área de estudos">
-          <a href="/conta">Minha conta</a>
-          <a href="/cursos">Todos os cursos</a>
+          <a href={appLink('/conta')}>Minha conta</a>
+          <a href={appLink('/cursos')}>Todos os cursos</a>
         </nav>
       </header>
 
