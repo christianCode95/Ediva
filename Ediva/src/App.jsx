@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import AccountPage, { AccountHome, EmailVerificationPage, PrivacyPage } from './AccountPage.jsx'
+import AccountPage, { AccountHome, PrivacyPage } from './AccountPage.jsx'
+import CourseLearningPage from './CourseLearningPage.jsx'
+import CourseMaterialsPage from './CourseMaterialsPage.jsx'
+import AboutPage from './AboutPage.jsx'
 import './App.css'
 
 const logoImage = '/1792417085611.webp'
-const contactEmail = 'ediva.oficial@gmail.com'
+const contactEmail = 'edivacursos@gmail.com'
 const pageTitles = {
   '/': 'Aprenda, pratique e transforme',
   '/cursos': 'Cursos',
@@ -15,7 +18,11 @@ const pageTitles = {
   '/entrar': 'Entrar na conta',
   '/cadastro': 'Criar conta',
   '/conta': 'Minha conta',
-  '/confirmar-email': 'Confirmar e-mail',
+  '/estudar/adm': 'Estudar Administração',
+  '/estudar/rh': 'Estudar Gestão de Recursos Humanos',
+  '/estudar/auxiliar-financeiro': 'Estudar Auxiliar Financeiro',
+  '/estudar/primeiro-emprego': 'Estudar Primeiro Emprego',
+  '/estudar/politica': 'Estudar Política e Cidadania',
   '/privacidade': 'Privacidade',
 }
 const coursePdfAssets = import.meta.glob('./Cursos/**/*.pdf', {
@@ -23,9 +30,14 @@ const coursePdfAssets = import.meta.glob('./Cursos/**/*.pdf', {
   query: '?url',
   import: 'default',
 })
+const courseVideoAssets = import.meta.glob('./Cursos/**/VIDEOS/*.mp4', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+})
 
 function modulesInCourse(folder, titles) {
-  return Object.entries(coursePdfAssets)
+  const modules = new Map(Object.entries(coursePdfAssets)
     .filter(([path]) => path.startsWith(`./Cursos/${folder}/`))
     .map(([path, url], index) => {
       const filename = path.split('/').at(-1)
@@ -35,13 +47,32 @@ function modulesInCourse(folder, titles) {
         .replace(/\.pdf$/i, '')
         .replace(/-1$/, '')
         .replaceAll('_', ' ')
-      return { number, title: titles[number - 1] || fallbackTitle, url }
+      return [number, {
+        number,
+        title: titles[number - 1] || fallbackTitle,
+        url,
+      }]
+    }))
+
+  Object.entries(courseVideoAssets)
+    .filter(([path]) => path.startsWith(`./Cursos/${folder}/VIDEOS/`))
+    .forEach(([path, videoUrl]) => {
+      const number = Number(path.split('/').at(-1).match(/^(\d+)\.mp4$/i)?.[1])
+      if (!Number.isInteger(number) || number < 1) return
+      const module = modules.get(number) || {
+        number,
+        title: titles[number - 1] || 'Videoaula do módulo ' + String(number).padStart(2, '0'),
+      }
+      modules.set(number, { ...module, videoUrl })
     })
-    .sort((left, right) => left.number - right.number)
+
+  return [...modules.values()].sort((left, right) => left.number - right.number)
 }
 
 const courses = [
   {
+    id: 'adm',
+    hasAssessment: true,
     title: 'Administração',
     description: 'Organização, rotinas e primeiros passos no mercado de trabalho.',
     image: '/1792417108805.webp',
@@ -60,6 +91,8 @@ const courses = [
     ]),
   },
   {
+    id: 'rh',
+    hasAssessment: true,
     title: 'Gestão de Recursos Humanos',
     description: 'Recrutamento, desenvolvimento de equipes e rotinas de RH.',
     image: '/1792417107155.webp',
@@ -78,6 +111,27 @@ const courses = [
     ]),
   },
   {
+    id: 'auxiliar-financeiro',
+    hasAssessment: true,
+    title: 'Auxiliar Financeiro',
+    description: 'Contas a pagar e receber, fluxo de caixa e rotinas da área financeira.',
+    image: '/auxiliar-financeiro.svg',
+    category: 'auxiliar financeiro finanças contas fluxo de caixa cobrança bancos orçamento',
+    modules: modulesInCourse('AUXILIAR FINANCEIRO', [
+      'Fundamentos da Área Financeira',
+      'Contas a Pagar',
+      'Contas a Receber e Cobrança',
+      'Fluxo de Caixa',
+      'Bancos, Pagamentos e Conciliação',
+      'Planilhas e Informática Financeira',
+      'Documentos Fiscais e Controles Financeiros',
+      'Despesas, Orçamento e Indicadores',
+      'Ética, Segurança e Sigilo Financeiro',
+      'Rotina Profissional e Primeiro Emprego',
+    ]),
+  },
+  {
+    id: 'primeiro-emprego',
     title: 'Primeiro Emprego',
     description: 'Prepare seu currículo, entrevistas e próximos passos profissionais.',
     image: '/1792417101189.webp',
@@ -91,6 +145,7 @@ const courses = [
     ]),
   },
   {
+    id: 'politica',
     title: 'Política e Cidadania',
     description: 'Conceitos políticos, pensamento crítico e participação cidadã.',
     image: '/1792417099268.webp',
@@ -213,12 +268,15 @@ function ModulesIcon() {
 function App() {
   const routePath = window.location.pathname.replace(/\/+$/, '') || '/'
   const [query, setQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [modal, setModal] = useState(null)
   const [signedInUser, setSignedInUser] = useState(null)
   const [accountChecked, setAccountChecked] = useState(false)
   const menuRef = useRef(null)
   const menuToggleRef = useRef(null)
+  const searchInputRef = useRef(null)
+  const searchToggleRef = useRef(null)
   const modalRef = useRef(null)
   const modalCloseRef = useRef(null)
   const modalOpenerRef = useRef(null)
@@ -237,6 +295,24 @@ function App() {
   }, [query, visibleCourses])
 
   const closeMenu = () => setMenuOpen(false)
+
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen])
+
+  useEffect(() => {
+    if (!searchOpen) return undefined
+
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') {
+        setSearchOpen(false)
+        searchToggleRef.current?.focus()
+      }
+    }
+
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [searchOpen])
 
   useEffect(() => {
     let active = true
@@ -331,7 +407,12 @@ function App() {
   if (routePath === '/entrar') return <AccountPage mode="login" />
   if (routePath === '/cadastro') return <AccountPage mode="signup" />
   if (routePath === '/conta') return <AccountHome />
-  if (routePath === '/confirmar-email') return <EmailVerificationPage />
+  const studyingCourse = courses.find((course) => course.id && `/estudar/${course.id}` === routePath)
+  if (studyingCourse) {
+    return studyingCourse.hasAssessment
+      ? <CourseLearningPage course={studyingCourse} />
+      : <CourseMaterialsPage course={studyingCourse} />
+  }
   if (routePath === '/privacidade') return <PrivacyPage />
 
   const firstName = signedInUser?.name.trim().split(/\s+/)[0]
@@ -393,16 +474,27 @@ function App() {
         </nav>
 
         {(routePath === '/' || routePath === '/cursos') && (
-          <label className="search-box">
-            <span className="sr-only">Buscar cursos, temas ou habilidades</span>
+          <div className={`search-box${searchOpen ? ' is-open' : ''}`}>
             <input
+              ref={searchInputRef}
               type="search"
+              aria-label="Buscar cursos, temas ou habilidades"
               placeholder="Buscar cursos, temas ou habilidades..."
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
             <SearchIcon />
-          </label>
+            <button
+              ref={searchToggleRef}
+              className="search-toggle"
+              type="button"
+              aria-label={searchOpen ? 'Fechar busca' : 'Abrir busca'}
+              aria-expanded={searchOpen}
+              onClick={() => setSearchOpen((open) => !open)}
+            >
+              <SearchIcon />
+            </button>
+          </div>
         )}
 
         <div className="account-actions">
@@ -435,7 +527,7 @@ function App() {
           <p>Cursos 100% online, práticos e acessíveis para você desenvolver novas habilidades.</p>
         </div>
         <div className="hero-actions">
-          <a className="button button-primary hero-primary" href="#cursos">
+          <a className="button button-primary hero-primary" href="/cursos">
             <span className="desktop-label">Conheça nossos cursos</span>
             <span className="mobile-label">Ver cursos</span>
             <ArrowIcon />
@@ -476,14 +568,26 @@ function App() {
                 <span><ClockIcon />{routePath === '/' ? '40 horas' : 'No seu ritmo'}</span>
                 <span><ModulesIcon />{routePath === '/' ? '10 módulos' : course.modules.length ? `${course.modules.length} módulos` : 'Em breve'}</span>
               </div>
-              <button
-                className="course-link"
-                type="button"
-                onClick={(event) => openModal(event, { type: 'course', course })}
-                aria-label={`${routePath === '/' ? 'Ver' : course.modules.length ? 'Acessar' : 'Ver detalhes de'} curso ${course.title}`}
-              >
-                {routePath === '/' ? 'Ver curso' : course.modules.length ? 'Acessar curso' : 'Em breve'} <ArrowIcon />
-              </button>
+              {course.id && course.modules.length ? (
+                <a
+                  className="course-link"
+                  href={`/estudar/${course.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${routePath === '/' ? 'Ver' : 'Acessar'} curso ${course.title} (abre em nova aba)`}
+                >
+                  {routePath === '/' ? 'Ver curso' : 'Acessar curso'} <ArrowIcon />
+                </a>
+              ) : (
+                <button
+                  className="course-link"
+                  type="button"
+                  onClick={(event) => openModal(event, { type: 'course', course })}
+                  aria-label={`${routePath === '/' ? 'Ver' : course.modules.length ? 'Acessar' : 'Ver detalhes de'} curso ${course.title}`}
+                >
+                  {routePath === '/' ? 'Ver curso' : course.modules.length ? 'Acessar curso' : 'Em breve'} <ArrowIcon />
+                </button>
+              )}
             </article>
           ))}
           {filteredCourses.length === 0 && (
@@ -522,8 +626,10 @@ function App() {
       </section>
       )}
 
-      {(routePath === '/' || routePath === '/sobre-a-ediva') && (
-      <section className={`about-section${routePath === '/sobre-a-ediva' ? ' page-about' : ''}`} id="sobre" aria-labelledby="about-title">
+      {routePath === '/sobre-a-ediva' && <AboutPage />}
+
+      {routePath === '/' && (
+      <section className="about-section" id="sobre" aria-labelledby="about-title">
         <div className="about-copy">
           <p className="section-eyebrow">SOBRE A EDIVA</p>
           <h1 id="about-title">Aprender pode abrir novos caminhos.</h1>
@@ -532,7 +638,7 @@ function App() {
             para quem quer desenvolver habilidades pessoais e profissionais com
             conteúdo online, prático e acessível.
           </p>
-          <a className="button button-primary" href={routePath === '/' ? '#cursos' : '/cursos'}>Conheça os cursos <ArrowIcon /></a>
+          <a className="button button-primary" href="#cursos">Conheça os cursos <ArrowIcon /></a>
         </div>
         <div className="about-highlight">
           <img src="/1792417161847.webp" alt="" loading="lazy" decoding="async" />
@@ -691,6 +797,15 @@ function App() {
                   </ol>
                 </div>
                 <p className="modal-note">Os PDFs estão organizados por curso e módulo. Você pode abrir ou baixar cada material.</p>
+                {modal.course.id && (
+                  <a
+                    className="button button-primary modal-action"
+                    href={`/estudar/${modal.course.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={closeModal}
+                  >{modal.course.hasAssessment ? 'Estudar e acompanhar progresso' : 'Acessar materiais do curso'} (nova aba)</a>
+                )}
               </>
             ) : (
               <p className="modal-note">Os materiais em PDF deste curso ainda estão sendo preparados.</p>

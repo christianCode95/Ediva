@@ -18,25 +18,9 @@ services:
         value: 22.12.0
       - key: NODE_ENV
         value: production
-      - key: EDIVA_PUBLIC_URL
-        value: https://ediva.com.br
       - key: EDIVA_ALLOWED_ORIGINS
         value: https://ediva.com.br,https://www.ediva.com.br
       - key: EDIVA_DB_PATH
         value: /var/data/ediva.sqlite
       - key: EDIVA_TRUST_CLOUDFLARE
         value: "true"
-      - key: EDIVA_SMTP_HOST
-        value: smtp.gmail.com
-      - key: EDIVA_SMTP_PORT
-        value: "465"
-      - key: EDIVA_SMTP_SECURE
-        value: "true"
-      - key: EDIVA_SMTP_USER
-        value: ediva.oficial@gmail.com
-      - key: EDIVA_SMTP_PASSWORD
-        sync: false
-      - key: EDIVA_MAIL_FROM
-        value: "EDIVA <ediva.oficial@gmail.com>"
-      - key: EDIVA_MAIL_REPLY_TO
-        value: ediva.oficial@gmail.com

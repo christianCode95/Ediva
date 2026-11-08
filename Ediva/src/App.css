@@ -150,6 +150,15 @@ main {
   stroke-width: 2.3;
 }
 
+.search-toggle {
+  display: none;
+}
+
+.search-toggle:focus-visible {
+  outline: 3px solid #ff168b;
+  outline-offset: 3px;
+}
+
 .account-actions {
   display: flex;
   align-items: center;
@@ -574,11 +583,6 @@ main {
   align-items: center;
   gap: clamp(32px, 7vw, 100px);
   border-top: 1px solid #f0eafb;
-}
-
-.page-about {
-  min-height: calc(100vh - 198px);
-  border-top: 0;
 }
 
 .section-eyebrow {
@@ -1368,6 +1372,10 @@ main {
     box-shadow: none;
   }
 
+  .search-box > svg {
+    display: none;
+  }
+
   .search-box input {
     position: fixed;
     left: 14px;
@@ -1385,14 +1393,26 @@ main {
     transition: width 160ms ease, opacity 160ms ease;
   }
 
-  .search-box:focus-within input {
+  .search-box.is-open input {
     width: calc(100vw - 28px);
     padding-inline: 12px;
     opacity: 1;
     pointer-events: auto;
   }
 
-  .search-box svg {
+  .search-toggle {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .search-toggle svg {
     width: 22px;
     height: 22px;
   }

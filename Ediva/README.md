@@ -1,6 +1,6 @@
 # EDIVA
 
-Site da EDIVA, construído com React e Vite, com API Node.js para cadastro, login e confirmação de e-mail. Os materiais PDF dos cursos ficam em `src/Cursos`.
+Site da EDIVA, construído com React e Vite, com API Node.js para cadastro e login. Os materiais PDF dos cursos ficam em `src/Cursos`.
 
 ## Requisitos
 
@@ -26,7 +26,27 @@ Em outro terminal, inicie o site:
 npm run dev:web
 ```
 
-O site fica disponível em `http://localhost:5173`. Para receber e-mails de confirmação localmente, configure as variáveis SMTP no `.env` usando uma senha de app. Esse arquivo e o banco local não devem ser enviados ao GitHub.
+O site fica disponível em `http://localhost:5173`. Cadastros aceitam e-mails fictícios (por exemplo, `teste@exemplo.com`) e entram na conta imediatamente, sem enviar nem exigir confirmação. Esse comportamento vale tanto no ambiente local quanto em produção. O e-mail informado é apenas o identificador da conta; recuperação de acesso deve ser solicitada à equipe da EDIVA. O arquivo `.env` e o banco local não devem ser enviados ao GitHub.
+
+## Acompanhamento dos cursos
+
+Depois de entrar na conta, escolha Administração, Gestão de Recursos Humanos ou Auxiliar Financeiro na área do aluno ou nos detalhes do curso. Os módulos são liberados em sequência. O aluno pode estudar pelo PDF e confirmar a conclusão manualmente, sem precisar assistir ao vídeo. Os três cursos oferecem uma videoaula opcional em cada um dos dez módulos. Os vídeos usam som ativado inicialmente e os controles nativos do player.
+
+Ao escolher vídeo, o sistema verifica internamente os intervalos realmente reproduzidos, sem exibir um indicador de percentual assistido. Quando a videoaula termina, a conclusão é registrada automaticamente e o aluno é levado ao próximo módulo; ao terminar a última aula, o questionário final é liberado. Pular diretamente para o final não registra a conclusão. A troca para PDF pausa o vídeo. O progresso concluído e as tentativas ficam salvos no banco SQLite associado à conta.
+
+Ao concluir os dez módulos, o aluno pode responder à avaliação final. Administração usa as 90 questões enviadas para o curso; RH e Auxiliar Financeiro usam 30 questões cada, conforme os respectivos questionários enviados. O questionário de Auxiliar Financeiro é organizado em dez grupos de três questões, correspondentes aos módulos. Os gabaritos ficam apenas no servidor e não são enviados ao aluno. É necessário acertar todas para concluir o curso e liberar o certificado, que pode ser salvo em PDF pela opção de impressão do navegador. Quando houver erros, a página informa os módulos que precisam ser revisados antes de uma nova tentativa.
+
+Auxiliar Financeiro está disponível em `/estudar/auxiliar-financeiro`, pelo catálogo e pela área do aluno, com dez módulos em PDF, dez videoaulas, progresso salvo, questionário final e certificado. Primeiro Emprego e Política e Cidadania usam a área de materiais; esses dois cursos ainda não têm questionário ou acompanhamento de conclusão cadastrado.
+
+Os arquivos `src/Cursos/<curso>/VIDEOS/1.mp4` a `10.mp4` são associados ao número do módulo dentro do mesmo curso. Um vídeo ausente não gera player nem link inválido, e o PDF continua disponível.
+
+### Gabaritos privados
+
+Os arquivos de questionários do repositório contêm apenas os enunciados e as alternativas. Os gabaritos reais são configuração privada do servidor e não devem ser enviados ao GitHub, incluídos nos testes ou colocados em `public`/`dist`.
+
+Na instalação local existente, os gabaritos ficam em `data/course-answer-keys.json`, dentro da pasta ignorada pelo Git. Para outro ambiente, configure `EDIVA_COURSE_ANSWER_KEYS_PATH` com o caminho de um arquivo privado ou `EDIVA_COURSE_ANSWER_KEYS_JSON` com seu conteúdo em uma variável secreta. A variável JSON, quando definida, tem prioridade sobre o arquivo. O conteúdo é um objeto com os identificadores `adm`, `rh` e `auxiliar-financeiro`; cada valor é uma lista das letras corretas, na ordem das perguntas, com exatamente 90, 30 e 30 itens respectivamente. Somente as letras das alternativas existentes são aceitas.
+
+Forneça esse arquivo separadamente ao servidor, com acesso restrito. Após alterar a configuração, reinicie a API. Sem um gabarito válido para o curso, cadastro, materiais, progresso e certificados já obtidos continuam disponíveis, mas novas correções retornam indisponibilidade temporária e não geram aprovação. Os testes usam respostas sintéticas e nunca os gabaritos reais.
 
 ## Produção
 
@@ -37,6 +57,6 @@ npm run build
 npm start
 ```
 
-Configure no ambiente da hospedagem `NODE_ENV=production`, `EDIVA_PUBLIC_URL`, `EDIVA_ALLOWED_ORIGINS` e as variáveis SMTP descritas em `.env.example`. A hospedagem também precisa manter o banco SQLite em armazenamento persistente; defina `EDIVA_DB_PATH` para esse local.
+Configure no ambiente da hospedagem `NODE_ENV=production` e `EDIVA_ALLOWED_ORIGINS`. A hospedagem também precisa manter o banco SQLite em armazenamento persistente; defina `EDIVA_DB_PATH` para esse local.
 
 O GitHub guarda o código, mas não executa a API Node.js nem mantém o banco SQLite. Para cadastro e login funcionarem no domínio, publique o app em uma hospedagem que execute Node.js e tenha armazenamento persistente.

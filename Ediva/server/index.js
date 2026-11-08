@@ -1,81 +1,45 @@
 import argon2 from 'argon2'
 import Database from 'better-sqlite3'
 import dotenv from 'dotenv'
-import nodemailer from 'nodemailer'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { createReadStream } from 'node:fs'
 import { createServer } from 'node:http'
 import { mkdir, readFile, stat } from 'node:fs/promises'
 import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isIP } from 'node:net'
+import { courseQuizzes } from './course-quizzes.js'
+import { loadCourseAnswerKeys } from './course-answer-keys.js'
 
 const serverDirectory = dirname(fileURLToPath(import.meta.url))
 const appDirectory = resolve(serverDirectory, '..')
 dotenv.config({ path: resolve(appDirectory, '.env') })
 const distDirectory = resolve(appDirectory, 'dist')
-let publicBaseUrl = (process.env.EDIVA_PUBLIC_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : '')).replace(/\/+$/, '')
-let publicOrigin = ''
-if (publicBaseUrl) {
-  try {
-    const parsedPublicUrl = new URL(publicBaseUrl)
-    publicOrigin = parsedPublicUrl.origin
-    if (parsedPublicUrl.pathname !== '/' || parsedPublicUrl.search || parsedPublicUrl.hash) {
-      throw new Error('EDIVA_PUBLIC_URL deve conter somente a origem do site, sem caminho ou parâmetros.')
-    }
-  } catch (error) {
-    throw new Error(`EDIVA_PUBLIC_URL inválida: ${error.message}`, { cause: error })
-  }
-}
 const configuredDatabasePath = process.env.EDIVA_DB_PATH
 const databasePath = configuredDatabasePath
   ? (isAbsolute(configuredDatabasePath) ? configuredDatabasePath : resolve(appDirectory, configuredDatabasePath))
   : resolve(appDirectory, 'data', 'ediva.sqlite')
+const answerKeysPath = process.env.EDIVA_COURSE_ANSWER_KEYS_PATH
+  ? resolve(appDirectory, process.env.EDIVA_COURSE_ANSWER_KEYS_PATH)
+  : resolve(appDirectory, 'data', 'course-answer-keys.json')
+const courseAnswerKeys = await loadCourseAnswerKeys(courseQuizzes, {
+  json: process.env.EDIVA_COURSE_ANSWER_KEYS_JSON,
+  filePath: answerKeysPath,
+})
 if (!['development', 'production'].includes(process.env.NODE_ENV)) {
   throw new Error('Defina NODE_ENV como development ou production antes de iniciar o servidor.')
 }
 const isProduction = process.env.NODE_ENV === 'production'
 const sessionCookieName = 'ediva_session'
 const sessionDurationSeconds = 60 * 60 * 24 * 30
-const verificationDurationMs = 24 * 60 * 60 * 1000
 const allowedOrigins = (process.env.EDIVA_ALLOWED_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
 const rateLimitBuckets = new Map()
-const smtpHost = process.env.EDIVA_SMTP_HOST?.trim() || ''
-const smtpPort = Number(process.env.EDIVA_SMTP_PORT || 587)
-const smtpSecure = process.env.EDIVA_SMTP_SECURE
-  ? process.env.EDIVA_SMTP_SECURE === 'true'
-  : smtpPort === 465
-const smtpUser = process.env.EDIVA_SMTP_USER || ''
-const smtpPassword = process.env.EDIVA_SMTP_PASSWORD || ''
-const mailFrom = process.env.EDIVA_MAIL_FROM?.trim() || ''
-const mailReplyTo = process.env.EDIVA_MAIL_REPLY_TO?.trim() || ''
-const emailTransport = smtpHost && smtpUser && smtpPassword
-  ? nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpSecure,
-    auth: { user: smtpUser, pass: smtpPassword },
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 20_000,
-    disableFileAccess: true,
-    disableUrlAccess: true,
-  })
-  : null
 
 if (isProduction && allowedOrigins.length === 0) {
   throw new Error('Configure EDIVA_ALLOWED_ORIGINS com a origem HTTPS pública antes de iniciar em produção.')
-}
-if (isProduction && (!publicBaseUrl || !publicOrigin.startsWith('https://'))) {
-  throw new Error('Configure EDIVA_PUBLIC_URL com a URL HTTPS pública antes de iniciar em produção.')
-}
-if (isProduction && !allowedOrigins.includes(publicOrigin)) {
-  throw new Error('EDIVA_PUBLIC_URL também precisa estar presente em EDIVA_ALLOWED_ORIGINS.')
-}
-if (isProduction && (!emailTransport || !mailFrom || !smtpPort)) {
-  throw new Error('Configure o SMTP e EDIVA_MAIL_FROM para enviar confirmações de e-mail em produção.')
 }
 
 await mkdir(dirname(databasePath), { recursive: true })
@@ -104,6 +68,25 @@ database.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions(expires_at);
+
+  CREATE TABLE IF NOT EXISTS course_module_progress (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id TEXT NOT NULL,
+    module_number INTEGER NOT NULL,
+    completed_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, course_id, module_number)
+  );
+
+  CREATE TABLE IF NOT EXISTS course_assessment_results (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    score INTEGER,
+    failed_modules TEXT NOT NULL DEFAULT '[]',
+    completed_at INTEGER,
+    certificate_id TEXT,
+    PRIMARY KEY (user_id, course_id)
+  );
 `)
 
 const existingUserColumns = new Set(database.pragma('table_info(users)').map((column) => column.name))
@@ -116,42 +99,53 @@ if (!existingUserColumns.has('email_verification_token_hash')) {
 if (!existingUserColumns.has('email_verification_expires_at')) {
   database.exec('ALTER TABLE users ADD COLUMN email_verification_expires_at INTEGER')
 }
+database.exec(`
+  UPDATE users
+  SET email_verified = 1,
+      email_verification_token_hash = NULL,
+      email_verification_expires_at = NULL
+  WHERE email_verified = 0
+`)
 
 const insertUser = database.prepare(
   'INSERT INTO users (id, name, email, password_hash, created_at, email_verified, email_verification_token_hash, email_verification_expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
 )
 const findUserByEmail = database.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE')
-const findUserByVerificationToken = database.prepare(`
-  SELECT id, name, email, created_at
-  FROM users
-  WHERE email_verification_token_hash = ?
-    AND email_verified = 0
-    AND email_verification_expires_at > ?
-`)
-const updateVerificationToken = database.prepare(`
-  UPDATE users
-  SET email_verification_token_hash = ?, email_verification_expires_at = ?
-  WHERE id = ? AND email_verified = 0
-`)
-const markEmailVerified = database.prepare(`
-  UPDATE users
-  SET email_verified = 1, email_verification_token_hash = NULL, email_verification_expires_at = NULL
-  WHERE id = ? AND email_verified = 0
-`)
-const deleteExpiredVerificationToken = database.prepare(`
-  UPDATE users
-  SET email_verification_token_hash = NULL, email_verification_expires_at = NULL
-  WHERE email_verified = 0 AND email_verification_expires_at <= ?
-`)
 const insertSession = database.prepare(
   'INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)',
 )
 const deleteSession = database.prepare('DELETE FROM sessions WHERE token_hash = ?')
+const listCourseModuleProgress = database.prepare(`
+  SELECT module_number, completed_at
+  FROM course_module_progress
+  WHERE user_id = ? AND course_id = ?
+  ORDER BY module_number
+`)
+const completeCourseModule = database.prepare(`
+  INSERT OR IGNORE INTO course_module_progress (user_id, course_id, module_number, completed_at)
+  VALUES (?, ?, ?, ?)
+`)
+const getCourseAssessment = database.prepare(`
+  SELECT attempts, score, failed_modules, completed_at, certificate_id
+  FROM course_assessment_results
+  WHERE user_id = ? AND course_id = ?
+`)
+const saveCourseAssessment = database.prepare(`
+  INSERT INTO course_assessment_results (
+    user_id, course_id, attempts, score, failed_modules, completed_at, certificate_id
+  ) VALUES (?, ?, 1, ?, ?, ?, ?)
+  ON CONFLICT (user_id, course_id) DO UPDATE SET
+    attempts = course_assessment_results.attempts + 1,
+    score = excluded.score,
+    failed_modules = excluded.failed_modules,
+    completed_at = excluded.completed_at,
+    certificate_id = excluded.certificate_id
+`)
 const findSessionUser = database.prepare(`
   SELECT users.id, users.name, users.email, users.created_at
   FROM sessions
   INNER JOIN users ON users.id = sessions.user_id
-  WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.email_verified = 1
+  WHERE sessions.token_hash = ? AND sessions.expires_at > ?
 `)
 const createUser = database.transaction((user) => {
   insertUser.run(
@@ -160,18 +154,10 @@ const createUser = database.transaction((user) => {
     user.email,
     user.passwordHash,
     user.createdAt,
-    0,
-    user.verificationTokenHash,
-    user.verificationExpiresAt,
+    1,
+    null,
+    null,
   )
-})
-const verifyEmailAndCreateSession = database.transaction((tokenHash, session) => {
-  const user = findUserByVerificationToken.get(tokenHash, Date.now())
-  if (!user) return null
-  const updated = markEmailVerified.run(user.id)
-  if (updated.changes !== 1) return null
-  insertSession.run(session.tokenHash, user.id, session.expiresAt, session.createdAt)
-  return user
 })
 
 const dummyPasswordHash = await argon2.hash(randomBytes(24).toString('hex'), {
@@ -214,46 +200,6 @@ function cookieValue(request, name) {
 
 function tokenDigest(token) {
   return createHash('sha256').update(token).digest('hex')
-}
-
-function escapeHtml(value) {
-  return value.replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  })[character])
-}
-
-async function sendVerificationEmail(user, token) {
-  if (!emailTransport || !mailFrom) return false
-
-  const verificationUrl = `${publicBaseUrl}/confirmar-email?token=${encodeURIComponent(token)}`
-  try {
-    await emailTransport.sendMail({
-      from: mailFrom,
-      to: user.email,
-      ...(mailReplyTo ? { replyTo: mailReplyTo } : {}),
-      subject: 'Confirme seu e-mail para acessar a EDIVA',
-      text: [
-        `Olá, ${user.name}!`,
-        '',
-        'Para confirmar que este e-mail é seu e ativar sua conta EDIVA, abra o link abaixo:',
-        verificationUrl,
-        '',
-        'Este link só pode ser usado uma vez e expira em 24 horas.',
-        'Se você não criou uma conta na EDIVA, ignore esta mensagem.',
-      ].join('\n'),
-      html: `<!doctype html><html lang="pt-BR"><body style="margin:0;background:#f8f5ff;font-family:Arial,sans-serif;color:#24105f"><main style="max-width:560px;margin:32px auto;padding:32px;background:#fff;border:1px solid #eee7ff;border-radius:20px"><p style="margin:0 0 10px;color:#a024d3;font-size:12px;font-weight:bold;letter-spacing:1px">EDIVA · ESCOLA DIGITAL</p><h1 style="margin:0 0 16px;font-size:25px">Confirme seu e-mail</h1><p>Olá, ${escapeHtml(user.name)}! Para confirmar que este endereço é seu e ativar sua conta EDIVA, use o botão abaixo.</p><p style="margin:26px 0"><a href="${verificationUrl}" style="display:inline-block;padding:14px 22px;border-radius:10px;background:#4f0cb8;color:#fff;text-decoration:none;font-weight:bold">Confirmar meu e-mail</a></p><p style="font-size:13px;color:#695d89">O link só pode ser usado uma vez e expira em 24 horas. Se você não criou uma conta na EDIVA, ignore esta mensagem.</p></main></body></html>`,
-      disableFileAccess: true,
-      disableUrlAccess: true,
-    })
-    return true
-  } catch (error) {
-    console.error('Falha ao enviar e-mail de confirmação:', error.code || 'ERRO_SMTP')
-    return false
-  }
 }
 
 function sessionCookie(token, maxAge) {
@@ -383,12 +329,36 @@ function contentTypeFor(pathname) {
     '.ico': 'image/x-icon',
     '.js': 'text/javascript; charset=utf-8',
     '.json': 'application/json; charset=utf-8',
+    '.mp4': 'video/mp4',
+    '.pdf': 'application/pdf',
     '.png': 'image/png',
     '.svg': 'image/svg+xml',
     '.webp': 'image/webp',
+    '.webm': 'video/webm',
     '.woff': 'font/woff',
     '.woff2': 'font/woff2',
   })[extension] || 'application/octet-stream'
+}
+
+function parseMediaRange(rangeHeader, fileSize) {
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(rangeHeader.trim())
+  if (!match || (!match[1] && !match[2]) || fileSize === 0) return null
+
+  let start
+  let end
+  if (!match[1]) {
+    const suffixLength = Number(match[2])
+    if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) return null
+    start = Math.max(fileSize - suffixLength, 0)
+    end = fileSize - 1
+  } else {
+    start = Number(match[1])
+    const requestedEnd = match[2] ? Number(match[2]) : fileSize - 1
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(requestedEnd)) return null
+    end = Math.min(requestedEnd, fileSize - 1)
+  }
+
+  return start >= fileSize || start > end ? null : { start, end }
 }
 
 async function serveFrontend(request, response, pathname) {
@@ -420,9 +390,59 @@ async function serveFrontend(request, response, pathname) {
   }
 
   try {
-    const contents = await readFile(filePath)
     const fileRelativePath = relative(distDirectory, filePath)
     const cacheControl = fileRelativePath === 'index.html' ? 'no-cache' : 'public, max-age=3600'
+    if (['.mp4', '.webm'].includes(extname(filePath).toLowerCase())) {
+      const { size } = await stat(filePath)
+      const rangeHeader = request.method === 'GET' ? request.headers.range : undefined
+      const byteRange = rangeHeader ? parseMediaRange(rangeHeader, size) : null
+      const mediaHeaders = {
+        'Content-Type': contentTypeFor(filePath),
+        'Cache-Control': cacheControl,
+        'Accept-Ranges': 'bytes',
+      }
+
+      if (rangeHeader && !byteRange) {
+        response.writeHead(416, {
+          ...mediaHeaders,
+          'Content-Range': `bytes */${size}`,
+          'Content-Length': 0,
+        })
+        response.end()
+        return
+      }
+
+      const statusCode = byteRange ? 206 : 200
+      const headers = {
+        ...mediaHeaders,
+        'Content-Length': byteRange ? byteRange.end - byteRange.start + 1 : size,
+        ...(byteRange ? { 'Content-Range': `bytes ${byteRange.start}-${byteRange.end}/${size}` } : {}),
+      }
+      if (request.method === 'HEAD') {
+        response.writeHead(statusCode, headers)
+        response.end()
+        return
+      }
+
+      const stream = createReadStream(filePath, byteRange || undefined)
+      response.once('close', () => stream.destroy())
+      stream.once('error', () => {
+        if (response.destroyed) return
+        if (response.headersSent) response.destroy()
+        else sendJson(response, 503, { error: 'O site ainda não foi compilado. Execute npm run build.' })
+      })
+      stream.once('open', () => {
+        if (response.destroyed) {
+          stream.destroy()
+          return
+        }
+        response.writeHead(statusCode, headers)
+        stream.pipe(response)
+      })
+      return
+    }
+
+    const contents = await readFile(filePath)
     response.writeHead(200, {
       'Content-Type': contentTypeFor(filePath),
       'Cache-Control': cacheControl,
@@ -450,6 +470,147 @@ const server = createServer(async (request, response) => {
       return
     }
 
+    const courseRoute = pathname.match(/^\/api\/courses\/([a-z]+(?:-[a-z]+)*)(?:\/modules\/(\d+)\/complete|\/assessment)?$/)
+    if (courseRoute) {
+      const [, courseId, moduleNumberText] = courseRoute
+      const course = Object.hasOwn(courseQuizzes, courseId) ? courseQuizzes[courseId] : null
+      if (!course) {
+        sendJson(response, 404, { error: 'Curso não encontrado.' })
+        return
+      }
+
+      const user = currentUser(request)
+      if (!user) {
+        sendJson(response, 401, { error: 'Entre na sua conta para acompanhar este curso.' })
+        return
+      }
+
+      const isAssessmentRoute = pathname.endsWith('/assessment')
+      if (request.method === 'GET' && !moduleNumberText && !isAssessmentRoute) {
+        const progress = listCourseModuleProgress.all(user.id, courseId)
+        const assessment = getCourseAssessment.get(user.id, courseId)
+        sendJson(response, 200, {
+          user: { id: user.id, name: user.name },
+          course: {
+            id: courseId,
+            title: course.title,
+            modules: course.modules,
+            questions: course.questions.map((question) => ({
+              moduleNumber: question.moduleNumber,
+              moduleTitle: question.moduleTitle,
+              category: question.category,
+              text: question.text,
+              options: question.options.map(({ key, text }) => ({ key, text })),
+            })),
+          },
+          progress: {
+            completedModules: progress.map((item) => item.module_number),
+            assessment: assessment
+              ? {
+                attempts: assessment.attempts,
+                score: assessment.score,
+                failedModules: JSON.parse(assessment.failed_modules),
+                completedAt: assessment.completed_at,
+                certificateId: assessment.certificate_id,
+              }
+              : null,
+          },
+        })
+        return
+      }
+
+      if (request.method !== 'POST') {
+        sendJson(response, 405, { error: 'Método não permitido.' }, { Allow: 'GET, POST' })
+        return
+      }
+      if (!requestOriginIsAllowed(request)) {
+        sendJson(response, 403, { error: 'Origem da solicitação não permitida.' })
+        return
+      }
+
+      if (moduleNumberText) {
+        const moduleNumber = Number(moduleNumberText)
+        if (!Number.isInteger(moduleNumber) || moduleNumber < 1 || moduleNumber > course.modules.length) {
+          sendJson(response, 400, { error: 'Módulo inválido.' })
+          return
+        }
+
+        const completedModules = listCourseModuleProgress.all(user.id, courseId)
+        const previousModulesCompleted = Array.from({ length: moduleNumber - 1 }, (_, index) => index + 1)
+          .every((number) => completedModules.some((item) => item.module_number === number))
+        if (!previousModulesCompleted) {
+          sendJson(response, 409, { error: 'Conclua os módulos anteriores antes de avançar.' })
+          return
+        }
+
+        await readJson(request)
+        completeCourseModule.run(user.id, courseId, moduleNumber, Date.now())
+        sendJson(response, 200, {
+          completedModules: listCourseModuleProgress.all(user.id, courseId).map((item) => item.module_number),
+        })
+        return
+      }
+
+      if (!isAssessmentRoute) {
+        sendJson(response, 404, { error: 'Rota do curso não encontrada.' })
+        return
+      }
+
+      const completedModules = listCourseModuleProgress.all(user.id, courseId)
+      if (completedModules.length !== course.modules.length) {
+        sendJson(response, 409, { error: 'Conclua todos os módulos antes de fazer o questionário.' })
+        return
+      }
+
+      const existingAssessment = getCourseAssessment.get(user.id, courseId)
+      if (existingAssessment?.completed_at) {
+        sendJson(response, 409, { error: 'Este curso já foi concluído e o certificado já está disponível.' })
+        return
+      }
+
+      const expectedAnswers = courseAnswerKeys.get(courseId)
+      if (!expectedAnswers) {
+        sendJson(response, 503, { error: 'A avaliação deste curso está temporariamente indisponível. Tente novamente mais tarde.' })
+        return
+      }
+
+      const body = await readJson(request)
+      const answers = body.answers
+      if (!Array.isArray(answers)
+        || answers.length !== course.questions.length
+        || answers.some((answer) => !['A', 'B', 'C', 'D'].includes(answer))) {
+        sendJson(response, 400, { error: 'Responda todas as questões antes de enviar o questionário.' })
+        return
+      }
+
+      const incorrectQuestions = course.questions
+        .map((question, index) => ({ question, answer: answers[index], expectedAnswer: expectedAnswers[index] }))
+        .filter(({ answer, expectedAnswer }) => answer !== expectedAnswer)
+      const score = course.questions.length - incorrectQuestions.length
+      const failedModules = [...new Set(incorrectQuestions.map(({ question }) => question.moduleNumber))]
+        .sort((left, right) => left - right)
+      const completedAt = score === course.questions.length ? Date.now() : null
+      const certificateId = completedAt ? randomUUID() : null
+
+      saveCourseAssessment.run(
+        user.id,
+        courseId,
+        score,
+        JSON.stringify(failedModules),
+        completedAt,
+        certificateId,
+      )
+      sendJson(response, 200, {
+        passed: score === course.questions.length,
+        score,
+        total: course.questions.length,
+        failedModules,
+        completedAt,
+        certificateId,
+      })
+      return
+    }
+
     if (pathname === '/api/auth/register' && request.method === 'POST') {
       if (!requestOriginIsAllowed(request)) {
         sendJson(response, 403, { error: 'Origem da solicitação não permitida.' })
@@ -467,52 +628,36 @@ const server = createServer(async (request, response) => {
         return
       }
 
-      const now = Date.now()
-      let user = findUserByEmail.get(email)
-      if (user?.email_verified) {
+      if (findUserByEmail.get(email)) {
         sendJson(response, 409, { error: 'Este e-mail já está cadastrado. Entre na sua conta.' })
         return
       }
 
-      const verificationToken = randomBytes(32).toString('base64url')
-      if (!user) {
-        user = {
-          id: randomUUID(),
-          name,
-          email,
-          passwordHash: await argon2.hash(password, {
-            type: argon2.argon2id,
-            memoryCost: 19_456,
-            timeCost: 2,
-            parallelism: 1,
-          }),
-          createdAt: now,
-          verificationTokenHash: tokenDigest(verificationToken),
-          verificationExpiresAt: now + verificationDurationMs,
+      const user = {
+        id: randomUUID(),
+        name,
+        email,
+        passwordHash: await argon2.hash(password, {
+          type: argon2.argon2id,
+          memoryCost: 19_456,
+          timeCost: 2,
+          parallelism: 1,
+        }),
+        createdAt: Date.now(),
+      }
+      try {
+        createUser(user)
+      } catch (error) {
+        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+          sendJson(response, 409, { error: 'Este e-mail já está cadastrado. Entre na sua conta.' })
+          return
         }
-        try {
-          createUser(user)
-        } catch (error) {
-          if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-            sendJson(response, 409, { error: 'Este e-mail já está cadastrado. Entre na sua conta.' })
-            return
-          }
-          throw error
-        }
-      } else {
-        updateVerificationToken.run(
-          tokenDigest(verificationToken),
-          now + verificationDurationMs,
-          user.id,
-        )
+        throw error
       }
 
-      const emailSent = await sendVerificationEmail(user, verificationToken)
-      sendJson(response, 202, {
-        status: 'verification_pending',
-        email: user.email,
-        emailSent,
-        message: 'Confira sua caixa de entrada para confirmar seu e-mail.',
+      startSession(response, user.id, request)
+      sendJson(response, 201, {
+        user: { id: user.id, name: user.name, email: user.email, created_at: user.createdAt },
       })
       return
     }
@@ -546,85 +691,10 @@ const server = createServer(async (request, response) => {
         sendJson(response, 401, { error: 'E-mail ou senha incorretos.' })
         return
       }
-      if (!user.email_verified) {
-        sendJson(response, 403, {
-          code: 'EMAIL_NOT_VERIFIED',
-          email: user.email,
-          error: 'Confirme seu e-mail antes de entrar na conta.',
-        })
-        return
-      }
-
       startSession(response, user.id, request)
       sendJson(response, 200, {
         user: { id: user.id, name: user.name, email: user.email, created_at: user.created_at },
       })
-      return
-    }
-
-    if (pathname === '/api/auth/resend-verification' && request.method === 'POST') {
-      if (!requestOriginIsAllowed(request)) {
-        sendJson(response, 403, { error: 'Origem da solicitação não permitida.' })
-        return
-      }
-
-      const body = await readJson(request)
-      const email = normalizeEmail(body.email)
-      if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        sendJson(response, 400, { error: 'Informe um e-mail válido.' })
-        return
-      }
-
-      const address = clientAddress(request)
-      const addressWait = consumeRateLimit(`resend:ip:${address}`, 12, 60 * 60 * 1000)
-      const emailWait = consumeRateLimit(`resend:email:${email}`, 4, 60 * 60 * 1000)
-      const waitSeconds = Math.max(addressWait, emailWait)
-      if (waitSeconds) {
-        sendJson(response, 429, { error: 'Muitas solicitações. Aguarde e tente novamente.' }, { 'Retry-After': String(waitSeconds) })
-        return
-      }
-
-      const user = findUserByEmail.get(email)
-      if (user && !user.email_verified) {
-        const token = randomBytes(32).toString('base64url')
-        const now = Date.now()
-        updateVerificationToken.run(tokenDigest(token), now + verificationDurationMs, user.id)
-        await sendVerificationEmail(user, token)
-      }
-
-      sendJson(response, 202, {
-        message: 'Se houver uma conta aguardando confirmação para este e-mail, enviaremos um novo link.',
-      })
-      return
-    }
-
-    if (pathname === '/api/auth/verify-email' && request.method === 'POST') {
-      if (!requestOriginIsAllowed(request)) {
-        sendJson(response, 403, { error: 'Origem da solicitação não permitida.' })
-        return
-      }
-
-      const body = await readJson(request)
-      const token = typeof body.token === 'string' ? body.token : ''
-      if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
-        sendJson(response, 400, { error: 'Este link de confirmação é inválido ou expirou.' })
-        return
-      }
-
-      const sessionToken = randomBytes(32).toString('base64url')
-      const now = Date.now()
-      const user = verifyEmailAndCreateSession(tokenDigest(token), {
-        tokenHash: tokenDigest(sessionToken),
-        createdAt: now,
-        expiresAt: now + sessionDurationSeconds * 1000,
-      })
-      if (!user) {
-        sendJson(response, 400, { error: 'Este link de confirmação é inválido, já foi usado ou expirou. Solicite um novo link.' })
-        return
-      }
-
-      response.setHeader('Set-Cookie', sessionCookie(sessionToken, sessionDurationSeconds))
-      sendJson(response, 200, { user })
       return
     }
 
@@ -662,7 +732,6 @@ const server = createServer(async (request, response) => {
 const cleanupTimer = setInterval(() => {
   const now = Date.now()
   database.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(now)
-  deleteExpiredVerificationToken.run(now)
 }, 60 * 60 * 1000)
 cleanupTimer.unref()
 

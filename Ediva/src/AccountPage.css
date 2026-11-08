@@ -212,40 +212,6 @@
   line-height: 1.4;
 }
 
-.account-feedback {
-  margin: 12px 0 0;
-  color: #594278;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.account-pending-email {
-  margin: -12px 0 18px;
-  color: #321080;
-  font-size: 15px;
-  font-weight: 750;
-  overflow-wrap: anywhere;
-}
-
-.account-resend-link {
-  justify-self: start;
-  padding: 0;
-  border: 0;
-  color: #6424c2;
-  background: transparent;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 750;
-  text-align: left;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.account-resend-link:disabled {
-  cursor: wait;
-  opacity: 0.7;
-}
-
 .account-forgot {
   display: inline-block;
   margin-top: 15px;
@@ -317,6 +283,33 @@
   color: #625581;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.account-course-links {
+  margin-bottom: 15px;
+  display: grid;
+  gap: 8px;
+}
+
+.account-course-links a {
+  padding: 11px 12px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid #e8def8;
+  border-radius: 10px;
+  color: #32117e;
+  background: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+}
+
+.account-course-links a strong {
+  font-size: 13px;
+}
+
+.account-course-links a span {
+  color: #6a5d86;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .account-empty-state .button {

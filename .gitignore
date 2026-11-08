@@ -1,4 +1,5 @@
 node_modules/
+/.codex-github-sync-*/
 Ediva/dist/
 Ediva/data/
 Ediva/.env
