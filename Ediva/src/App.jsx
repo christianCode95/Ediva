@@ -75,7 +75,7 @@ const courses = [
     hasAssessment: true,
     title: 'Auxiliar Financeiro',
     description: 'Contas a pagar e receber, fluxo de caixa e rotinas da área financeira.',
-    image: '/auxiliar-financeiro.svg',
+    image: '/auxiliar-financeiro.jpeg',
     category: 'auxiliar financeiro finanças contas fluxo de caixa cobrança bancos orçamento',
     modules: modulesInCourse('AUXILIAR FINANCEIRO', [
       'Fundamentos da Área Financeira',
@@ -94,7 +94,7 @@ const courses = [
     id: 'primeiro-emprego',
     title: 'Primeiro Emprego',
     description: 'Prepare seu currículo, entrevistas e próximos passos profissionais.',
-    image: '/1792417101189.webp',
+    image: '/primeiro-emprego.jpeg',
     category: 'primeiro emprego carreira currículo',
     modules: modulesInCourse('PRIMEIRO EMPREGO', [
       'Conhecendo o Mercado de Trabalho',
