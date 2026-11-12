@@ -19,6 +19,8 @@ const routes = [
   'estudar/auxiliar-financeiro',
   'estudar/primeiro-emprego',
   'estudar/politica',
+  'estudar/aprender-a-aprender',
+  'estudar/psicologia-no-trabalho',
 ]
 
 for (const route of routes) {

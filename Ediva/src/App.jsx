@@ -25,6 +25,8 @@ const pageTitles = {
   '/estudar/auxiliar-financeiro': 'Estudar Auxiliar Financeiro',
   '/estudar/primeiro-emprego': 'Estudar Primeiro Emprego',
   '/estudar/politica': 'Estudar Política e Cidadania',
+  '/estudar/aprender-a-aprender': 'Estudar Aprender a Aprender',
+  '/estudar/psicologia-no-trabalho': 'Estudar Psicologia no Trabalho',
   '/privacidade': 'Privacidade',
 }
 const courses = [
@@ -94,7 +96,7 @@ const courses = [
     description: 'Prepare seu currículo, entrevistas e próximos passos profissionais.',
     image: '/1792417101189.webp',
     category: 'primeiro emprego carreira currículo',
-    modules: modulesInCourse('APRENDER', [
+    modules: modulesInCourse('PRIMEIRO EMPREGO', [
       'Conhecendo o Mercado de Trabalho',
       'Currículo Profissional do Zero',
       'Entrevistas e Processos Seletivos',
@@ -114,6 +116,34 @@ const courses = [
       'Ideologias e Sistemas Políticos',
       'Como Funciona a Política Brasileira',
       'Pensamento Crítico e Participação Cidadã',
+    ]),
+  },
+  {
+    id: 'aprender-a-aprender',
+    title: 'Aprender a Aprender',
+    description: 'Memória, concentração e estratégias para organizar seus estudos com autonomia.',
+    image: '/aprender-a-aprender.svg',
+    category: 'aprender aprendizagem estudos memória concentração hábitos organização autonomia',
+    modules: modulesInCourse('APRENDER', [
+      'Como Aprendemos',
+      'Diferentes Formas de Aprender e Estudar',
+      'Memória, Concentração e Fixação',
+      'Organização, Hábitos e Autonomia nos Estudos',
+      'Estratégias Práticas e Plano Pessoal',
+    ]),
+  },
+  {
+    id: 'psicologia-no-trabalho',
+    title: 'Psicologia no Trabalho',
+    description: 'Comunicação, inteligência emocional e bem-estar nas relações profissionais.',
+    image: '/psicologia-no-trabalho.svg',
+    category: 'psicologia trabalho comunicação empatia emoções conflitos inteligência emocional motivação estresse bem-estar equipe liderança',
+    modules: modulesInCourse('PSICOLOGIA DO TRABALHO', [
+      'Fundamentos da Psicologia no Trabalho',
+      'Comunicação, Empatia e Relacionamentos',
+      'Emoções, Conflitos e Inteligência Emocional',
+      'Motivação, Estresse e Bem-Estar Profissional',
+      'Trabalho em Equipe, Liderança e Desenvolvimento Profissional',
     ]),
   },
   {
@@ -145,14 +175,7 @@ const courses = [
     modules: [],
   },
 ]
-const homeCourseTitles = new Set([
-  'Administração',
-  'Atendimento ao Cliente',
-  'Marketing Digital',
-  'Informática Básica',
-  'Desenvolvimento Pessoal',
-])
-const homeCourses = courses.filter((course) => homeCourseTitles.has(course.title))
+const homeCourses = courses.filter((course) => course.id && course.modules.length)
 
 const benefits = [
   {
@@ -525,7 +548,7 @@ function App() {
             <h1>Nossos <span>cursos</span></h1>
             <p>Escolha a área que mais combina com os seus objetivos.</p>
           </div>
-          <a href="#lista-de-cursos" className="all-courses">
+          <a href={routePath === '/' ? appLink('/cursos') : '#lista-de-cursos'} className="all-courses">
             Ver todos os cursos <ArrowIcon />
           </a>
         </div>
@@ -541,8 +564,8 @@ function App() {
                 </div>
               </div>
               <div className="course-meta">
-                <span><ClockIcon />{routePath === '/' ? '40 horas' : 'No seu ritmo'}</span>
-                <span><ModulesIcon />{routePath === '/' ? '10 módulos' : course.modules.length ? `${course.modules.length} módulos` : 'Em breve'}</span>
+                <span><ClockIcon />No seu ritmo</span>
+                <span><ModulesIcon />{course.modules.length ? `${course.modules.length} módulos` : 'Em breve'}</span>
               </div>
               {course.id && course.modules.length ? (
                 <a

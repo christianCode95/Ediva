@@ -36,7 +36,9 @@ Ao escolher vídeo, o sistema verifica internamente os intervalos realmente repr
 
 Ao concluir os dez módulos, o aluno pode responder à avaliação final. Administração usa as 90 questões enviadas para o curso; RH e Auxiliar Financeiro usam 30 questões cada, conforme os respectivos questionários enviados. O questionário de Auxiliar Financeiro é organizado em dez grupos de três questões, correspondentes aos módulos. Os gabaritos ficam apenas no servidor e não são enviados ao aluno. É necessário acertar todas para concluir o curso e liberar o certificado, que pode ser salvo em PDF pela opção de impressão do navegador. Quando houver erros, a página informa os módulos que precisam ser revisados antes de uma nova tentativa.
 
-Auxiliar Financeiro está disponível em `/estudar/auxiliar-financeiro`, pelo catálogo e pela área do aluno, com dez módulos em PDF, dez videoaulas, progresso salvo, questionário final e certificado. Primeiro Emprego e Política e Cidadania usam a área de materiais; esses dois cursos ainda não têm questionário ou acompanhamento de conclusão cadastrado.
+Auxiliar Financeiro está disponível em `/estudar/auxiliar-financeiro`, pelo catálogo e pela área do aluno, com dez módulos em PDF, dez videoaulas, progresso salvo, questionário final e certificado. Primeiro Emprego, Política e Cidadania, Aprender a Aprender e Psicologia no Trabalho usam a área de materiais, com cinco módulos em PDF e cinco videoaulas cada. Esses quatro cursos ainda não têm questionário ou acompanhamento de conclusão cadastrado.
+
+Aprender a Aprender está em `/estudar/aprender-a-aprender` e usa os arquivos de `src/Cursos/APRENDER`. Psicologia no Trabalho está em `/estudar/psicologia-no-trabalho` e usa `src/Cursos/PSICOLOGIA DO TRABALHO`. Primeiro Emprego usa sua própria pasta `src/Cursos/PRIMEIRO EMPREGO`. Os sete cursos com materiais aparecem na página inicial e no catálogo, com acesso em nova aba.
 
 Os arquivos `src/Cursos/<curso>/VIDEOS/1.mp4` a `10.mp4` são associados ao número do módulo dentro do mesmo curso. Um vídeo ausente não gera player nem link inválido, e o PDF continua disponível.
 
