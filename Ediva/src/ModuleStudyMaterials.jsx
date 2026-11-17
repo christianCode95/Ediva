@@ -78,6 +78,11 @@ export default function ModuleStudyMaterials({
 
   return (
     <div className="learning-study-materials">
+      {module.videoPending && module.url && (
+        <p className="learning-study-help">
+          A videoaula deste módulo ainda não está disponível. Você pode estudar pelo PDF.
+        </p>
+      )}
       {module.videoUrl && module.url && (
         <fieldset className="learning-study-methods">
           <legend>{isCompleted ? 'Escolha como revisar este módulo' : 'Como você prefere estudar?'}</legend>

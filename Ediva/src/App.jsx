@@ -27,6 +27,7 @@ const pageTitles = {
   '/estudar/politica': 'Estudar Política e Cidadania',
   '/estudar/aprender-a-aprender': 'Estudar Aprender a Aprender',
   '/estudar/psicologia-no-trabalho': 'Estudar Psicologia no Trabalho',
+  '/estudar/inteligencia-artificial': 'Estudar Inteligência Artificial',
   '/privacidade': 'Privacidade',
 }
 const courses = [
@@ -136,7 +137,7 @@ const courses = [
     id: 'psicologia-no-trabalho',
     title: 'Psicologia no Trabalho',
     description: 'Comunicação, inteligência emocional e bem-estar nas relações profissionais.',
-    image: '/psicologia-no-trabalho.svg',
+    image: '/psicologia-no-trabalho.jpeg',
     category: 'psicologia trabalho comunicação empatia emoções conflitos inteligência emocional motivação estresse bem-estar equipe liderança',
     modules: modulesInCourse('PSICOLOGIA DO TRABALHO', [
       'Fundamentos da Psicologia no Trabalho',
@@ -145,6 +146,22 @@ const courses = [
       'Motivação, Estresse e Bem-Estar Profissional',
       'Trabalho em Equipe, Liderança e Desenvolvimento Profissional',
     ]),
+  },
+  {
+    id: 'inteligencia-artificial',
+    title: 'Inteligência Artificial',
+    description: 'Use a IA nos estudos e no trabalho, conhecendo seus limites, riscos e cuidados éticos.',
+    image: '/inteligencia-artificial.jpeg',
+    category: 'inteligência artificial ia ferramentas prompts tecnologia estudos trabalho segurança ética',
+    modules: modulesInCourse('IA', [
+      'O que é Inteligência Artificial',
+      'Ferramentas de IA e Como Fazer Bons Pedidos',
+      'IA no Trabalho e nos Estudos',
+      'Limites, Riscos, Golpes e Checagem',
+      'Ética, Regras e o Futuro do Trabalho',
+    ]).map((module) => module.number === 3
+      ? { ...module, videoUrl: undefined, videoPending: true }
+      : module),
   },
   {
     title: 'Atendimento ao Cliente',

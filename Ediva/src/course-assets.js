@@ -14,7 +14,7 @@ export function modulesInCourse(folder, titles) {
     .filter(([path]) => path.startsWith(`./Cursos/${folder}/`))
     .map(([path, url], index) => {
       const filename = path.split('/').at(-1)
-      const number = Number(filename.match(/Modulo_(\d+)_/i)?.[1]) || index + 1
+      const number = Number(filename.match(/Modulo_(\d+)(?:_|\.pdf$)/i)?.[1]) || index + 1
       const fallbackTitle = filename
         .replace(/^EDIVA.*?Modulo_\d+_/i, '')
         .replace(/\.pdf$/i, '')
