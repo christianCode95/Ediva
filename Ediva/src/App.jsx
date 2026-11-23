@@ -123,7 +123,7 @@ const courses = [
     id: 'aprender-a-aprender',
     title: 'Aprender a Aprender',
     description: 'Memória, concentração e estratégias para organizar seus estudos com autonomia.',
-    image: '/aprender-a-aprender.svg',
+    image: '/aprender-a-aprender.jpeg',
     category: 'aprender aprendizagem estudos memória concentração hábitos organização autonomia',
     modules: modulesInCourse('APRENDER', [
       'Como Aprendemos',
