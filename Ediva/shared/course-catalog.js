@@ -112,6 +112,7 @@ export const courseCatalog = [
   },
   {
     "id": "psicologia-no-trabalho",
+    "hasAssessment": true,
     "title": "Psicologia no Trabalho",
     "description": "Comunicação, inteligência emocional e bem-estar nas relações profissionais.",
     "image": "/psicologia-no-trabalho.jpeg",
