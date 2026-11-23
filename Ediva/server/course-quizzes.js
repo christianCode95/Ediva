@@ -1,7 +1,9 @@
 import { auxiliarFinanceiroQuiz } from './finance-quiz.js'
+import { inteligenciaArtificialQuiz } from './ia-quiz.js'
 
 export const courseQuizzes = {
   'auxiliar-financeiro': auxiliarFinanceiroQuiz,
+  'inteligencia-artificial': inteligenciaArtificialQuiz,
   "adm": {
     "title": "Administra\u00e7\u00e3o",
     "modules": [

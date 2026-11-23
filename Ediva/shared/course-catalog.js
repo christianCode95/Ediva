@@ -126,6 +126,7 @@ export const courseCatalog = [
   },
   {
     "id": "inteligencia-artificial",
+    "hasAssessment": true,
     "title": "Inteligência Artificial",
     "description": "Use a IA nos estudos e no trabalho, conhecendo seus limites, riscos e cuidados éticos.",
     "image": "/inteligencia-artificial.jpeg",
