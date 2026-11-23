@@ -96,6 +96,7 @@ export const courseCatalog = [
   },
   {
     "id": "aprender-a-aprender",
+    "hasAssessment": true,
     "title": "Aprender a Aprender",
     "description": "Memória, concentração e estratégias para organizar seus estudos com autonomia.",
     "image": "/aprender-a-aprender.jpeg",

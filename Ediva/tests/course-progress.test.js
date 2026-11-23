@@ -8,7 +8,7 @@ import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 const appDirectory = fileURLToPath(new URL('../', import.meta.url))
-const courseIds = ['primeiro-emprego', 'politica', 'aprender-a-aprender', 'psicologia-no-trabalho']
+const courseIds = ['primeiro-emprego', 'politica', 'psicologia-no-trabalho']
 const allModules = [1, 2, 3, 4, 5]
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
 
@@ -185,7 +185,7 @@ test('all courses without an assessment save sequential study progress without i
       assert.equal(saved.assessment, null)
       assert.equal(saved.certificateId, undefined)
     }
-    for (const [id, questionCount] of Object.entries({ adm: 90, rh: 30, 'auxiliar-financeiro': 30, 'inteligencia-artificial': 25 })) {
+    for (const [id, questionCount] of Object.entries({ adm: 90, rh: 30, 'auxiliar-financeiro': 30, 'inteligencia-artificial': 25, 'aprender-a-aprender': 15 })) {
       const assessed = await request(coursePath(id))
       assert.equal(assessed.status, 200)
       assert.equal(assessed.body.course.hasAssessment, true)
