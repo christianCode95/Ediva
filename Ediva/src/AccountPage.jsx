@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { appLink, assetLink } from './site-links.js'
+import { courseCatalog } from '../shared/course-catalog.js'
 import './AccountPage.css'
 
 const supportEmail = 'edivacursos@gmail.com'
 const brandImage = assetLink('/1792417085611.webp')
+const learningCourses = courseCatalog.filter((course) => course.id && course.moduleTitles?.length)
+const learningCoursePaths = new Set(learningCourses.map((course) => '/estudar/' + course.id))
 
 function AccountBrand() {
   return (
@@ -49,7 +52,7 @@ function AccountFrame({ children }) {
 export default function AccountPage({ mode }) {
   const isSignup = mode === 'signup'
   const requestedReturnPath = new URLSearchParams(window.location.search).get('redirect')
-  const returnPath = ['/estudar/adm', '/estudar/rh', '/estudar/auxiliar-financeiro'].includes(requestedReturnPath)
+  const returnPath = learningCoursePaths.has(requestedReturnPath)
     ? requestedReturnPath
     : '/conta'
   const authRedirectQuery = returnPath === '/conta' ? '' : `?redirect=${encodeURIComponent(returnPath)}`
@@ -240,20 +243,16 @@ export function AccountHome() {
           </div>
           <div className="account-empty-state">
             <strong>Escolha um curso para acompanhar</strong>
-            <p>Seu progresso fica salvo na conta. Conclua os módulos, faça a avaliação e obtenha seu certificado.</p>
+            <p>Seu progresso fica salvo na conta. Escolha um curso e conclua os módulos pelo PDF ou pelas videoaulas disponíveis.</p>
             <div className="account-course-links">
-              <a href={appLink('/estudar/adm')}>
-                <strong>Administração</strong>
-                <span>10 módulos · questionário final · certificado</span>
-              </a>
-              <a href={appLink('/estudar/rh')}>
-                <strong>Gestão de Recursos Humanos</strong>
-                <span>10 módulos · questionário final · certificado</span>
-              </a>
-              <a href={appLink('/estudar/auxiliar-financeiro')}>
-                <strong>Auxiliar Financeiro</strong>
-                <span>10 módulos · questionário final · certificado</span>
-              </a>
+              {learningCourses.map((course) => (
+                <a href={appLink('/estudar/' + course.id)} key={course.id}>
+                  <strong>{course.title}</strong>
+                  <span>{course.moduleTitles.length} módulos · {course.hasAssessment
+                    ? 'questionário final · certificado'
+                    : 'progresso salvo'}</span>
+                </a>
+              ))}
             </div>
             <a className="button button-primary" href={appLink('/cursos')}>Conhecer todos os cursos</a>
           </div>

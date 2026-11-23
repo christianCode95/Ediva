@@ -34,7 +34,7 @@ export default function CourseLearningPage({ course }) {
         }
         if (active) {
           setData(responseData)
-          setAnswers(Array(responseData.course.questions.length).fill(''))
+          setAnswers(Array(responseData.course.questions?.length || 0).fill(''))
         }
       })
       .catch((requestError) => {
@@ -65,11 +65,13 @@ export default function CourseLearningPage({ course }) {
 
   const completedModules = data?.progress.completedModules || []
   const modules = course.modules
+  const hasAssessment = Boolean(data?.course.hasAssessment ?? course.hasAssessment)
+    && Boolean(data?.course.questions?.length)
   const allModulesCompleted = modules.length > 0
     && modules.every((module) => completedModules.includes(module.number))
   const moduleGroups = useMemo(() => {
     if (!data) return []
-    return data.course.questions.reduce((groups, question, index) => {
+    return (data.course.questions || []).reduce((groups, question, index) => {
       let currentGroup = groups.at(-1)
       if (!currentGroup || currentGroup.number !== question.moduleNumber) {
         currentGroup = {
@@ -112,13 +114,21 @@ export default function CourseLearningPage({ course }) {
       setNextStudyMethod(studyMethod)
       setData((current) => ({
         ...current,
-        progress: { ...current.progress, completedModules: responseData.completedModules },
+        progress: {
+          ...current.progress,
+          completedModules: responseData.completedModules,
+          modulesCompletedAt: responseData.modulesCompletedAt ?? current.progress.modulesCompletedAt,
+        },
       }))
       setLearningMessage('')
       setCompletionMessage(nextModule
         ? 'Módulo ' + String(moduleNumber).padStart(2, '0') + ' concluído. O próximo módulo já está liberado.'
-        : 'Todos os módulos foram concluídos. O questionário final já está liberado.')
-      setFocusTarget(nextModule ? 'module-heading-' + nextModule.number : 'assessment-heading')
+        : hasAssessment
+          ? 'Todos os módulos foram concluídos. O questionário final já está liberado.'
+          : 'Todos os módulos foram concluídos. Seu progresso está salvo na conta.')
+      setFocusTarget(nextModule
+        ? 'module-heading-' + nextModule.number
+        : hasAssessment ? 'assessment-heading' : 'modules-completion-heading')
       return true
     } catch (requestError) {
       setError(requestError.message || 'Não foi possível conectar ao servidor.')
@@ -198,7 +208,7 @@ export default function CourseLearningPage({ course }) {
   }
 
   const assessment = data.progress.assessment
-  const certificateAvailable = Boolean(assessment?.completedAt && assessment?.certificateId)
+  const certificateAvailable = hasAssessment && Boolean(assessment?.completedAt && assessment?.certificateId)
   const activeModuleNumber = modules.find((module) => !completedModules.includes(module.number))?.number
   const progressPercent = modules.length ? Math.round((completedModules.length / modules.length) * 100) : 0
 
@@ -208,7 +218,11 @@ export default function CourseLearningPage({ course }) {
       intro={
         <>
           Estude os módulos em ordem pelo PDF ou pela videoaula opcional. Pelo PDF, confirme quando terminar de estudar.
-          Pelo vídeo, a conclusão é automática ao terminar a aula. Ao concluir todos os módulos, responda ao questionário final.
+          Pelo vídeo, a conclusão é automática ao terminar a aula.
+          {hasAssessment
+            ? ' Ao concluir todos os módulos, responda ao questionário final.'
+            : ' Ao concluir todos os módulos, seu estudo ficará registrado na conta.'}
+          {' '}
           Você pode voltar aos conteúdos para revisar quando quiser.
         </>
       }
@@ -267,10 +281,12 @@ export default function CourseLearningPage({ course }) {
                       isActive={isActive}
                       isCompleted={isCompleted}
                       isLastModule={module.number === modules.at(-1).number}
+                      hasAssessment={hasAssessment}
                       initialMethod={nextStudyMethod}
                       completing={completingModule}
                       onComplete={completeModule}
                       onPdfOpen={markModuleOpened}
+                      allowDownload={!hasAssessment}
                     />
                   )}
                 </CourseModuleCard>
@@ -279,7 +295,16 @@ export default function CourseLearningPage({ course }) {
           </ol>
         </section>
 
-        {allModulesCompleted && !certificateAvailable && (
+        {allModulesCompleted && !hasAssessment && (
+          <section className="learning-assessment" aria-labelledby="modules-completion-heading">
+            <p className="learning-eyebrow">ESTUDOS CONCLUÍDOS</p>
+            <h2 id="modules-completion-heading" tabIndex="-1">Todos os módulos concluídos</h2>
+            <p>Seu progresso está salvo na conta. Você pode voltar aos módulos para estudar e revisar quando quiser.</p>
+            <a className="learning-back-link" href={appLink('/conta')}>Voltar para minha conta</a>
+          </section>
+        )}
+
+        {allModulesCompleted && hasAssessment && !certificateAvailable && (
           <section className="learning-assessment" aria-labelledby="assessment-heading">
             <p className="learning-eyebrow">ETAPA FINAL</p>
             <h2 id="assessment-heading" tabIndex="-1">Questionário final</h2>

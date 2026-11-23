@@ -7,6 +7,7 @@ export default function ModuleStudyMaterials({
   isActive,
   isCompleted,
   isLastModule,
+  hasAssessment = true,
   initialMethod = 'pdf',
   completing,
   onComplete,
@@ -25,7 +26,9 @@ export default function ModuleStudyMaterials({
   const completionInFlightRef = useRef(false)
   const panelId = 'study-' + courseId + '-' + module.number
   const moduleLabel = String(module.number).padStart(2, '0')
-  const nextStep = isLastModule ? 'liberar o questionário' : 'ir para o próximo módulo'
+  const nextStep = isLastModule
+    ? hasAssessment ? 'liberar o questionário' : 'concluir os módulos do curso'
+    : 'ir para o próximo módulo'
 
   useEffect(() => {
     const video = videoRef.current
@@ -164,7 +167,9 @@ export default function ModuleStudyMaterials({
               : isCompleted
                 ? 'Este módulo já foi concluído. Você pode rever a videoaula quando quiser.'
                 : isLastModule
-                  ? 'Ao terminar a videoaula, a conclusão será salva e o questionário final será aberto.'
+                  ? hasAssessment
+                    ? 'Ao terminar a videoaula, a conclusão será salva e o questionário final será aberto.'
+                    : 'Ao terminar a videoaula, a conclusão será salva e todos os módulos do curso estarão concluídos.'
                   : 'Ao terminar a videoaula, a conclusão será salva e você seguirá para o próximo módulo.'}
           </p>
           <video

@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { isIP } from 'node:net'
 import { courseQuizzes } from './course-quizzes.js'
 import { loadCourseAnswerKeys } from './course-answer-keys.js'
+import { learningCourses } from './course-catalog.js'
 
 const serverDirectory = dirname(fileURLToPath(import.meta.url))
 const appDirectory = resolve(serverDirectory, '..')
@@ -141,6 +142,20 @@ const saveCourseAssessment = database.prepare(`
     completed_at = excluded.completed_at,
     certificate_id = excluded.certificate_id
 `)
+
+function moduleProgress(course, progressRows) {
+  const relevantRows = progressRows.filter((row) => (
+    course.modules.some((module) => module.number === row.module_number)
+  ))
+  const completedModules = relevantRows.map((row) => row.module_number)
+  const allModulesCompleted = course.modules.length > 0
+    && course.modules.every((module) => completedModules.includes(module.number))
+  return {
+    completedModules,
+    modulesCompletedAt: allModulesCompleted ? Math.max(...relevantRows.map((row) => row.completed_at)) : null,
+  }
+}
+
 const findSessionUser = database.prepare(`
   SELECT users.id, users.name, users.email, users.created_at
   FROM sessions
@@ -473,7 +488,7 @@ const server = createServer(async (request, response) => {
     const courseRoute = pathname.match(/^\/api\/courses\/([a-z]+(?:-[a-z]+)*)(?:\/modules\/(\d+)\/complete|\/assessment)?$/)
     if (courseRoute) {
       const [, courseId, moduleNumberText] = courseRoute
-      const course = Object.hasOwn(courseQuizzes, courseId) ? courseQuizzes[courseId] : null
+      const course = Object.hasOwn(learningCourses, courseId) ? learningCourses[courseId] : null
       if (!course) {
         sendJson(response, 404, { error: 'Curso não encontrado.' })
         return
@@ -488,13 +503,14 @@ const server = createServer(async (request, response) => {
       const isAssessmentRoute = pathname.endsWith('/assessment')
       if (request.method === 'GET' && !moduleNumberText && !isAssessmentRoute) {
         const progress = listCourseModuleProgress.all(user.id, courseId)
-        const assessment = getCourseAssessment.get(user.id, courseId)
+        const assessment = course.hasAssessment ? getCourseAssessment.get(user.id, courseId) : null
         sendJson(response, 200, {
           user: { id: user.id, name: user.name },
           course: {
             id: courseId,
             title: course.title,
             modules: course.modules,
+            hasAssessment: course.hasAssessment,
             questions: course.questions.map((question) => ({
               moduleNumber: question.moduleNumber,
               moduleTitle: question.moduleTitle,
@@ -504,7 +520,7 @@ const server = createServer(async (request, response) => {
             })),
           },
           progress: {
-            completedModules: progress.map((item) => item.module_number),
+            ...moduleProgress(course, progress),
             assessment: assessment
               ? {
                 attempts: assessment.attempts,
@@ -545,14 +561,17 @@ const server = createServer(async (request, response) => {
 
         await readJson(request)
         completeCourseModule.run(user.id, courseId, moduleNumber, Date.now())
-        sendJson(response, 200, {
-          completedModules: listCourseModuleProgress.all(user.id, courseId).map((item) => item.module_number),
-        })
+        sendJson(response, 200, moduleProgress(course, listCourseModuleProgress.all(user.id, courseId)))
         return
       }
 
       if (!isAssessmentRoute) {
         sendJson(response, 404, { error: 'Rota do curso não encontrada.' })
+        return
+      }
+
+      if (!course.hasAssessment) {
+        sendJson(response, 404, { error: 'Este curso ainda não tem questionário cadastrado.' })
         return
       }
 
