@@ -36,7 +36,7 @@ const courses = [
     hasAssessment: true,
     title: 'Administração',
     description: 'Organização, rotinas e primeiros passos no mercado de trabalho.',
-    image: '/1792417108805.webp',
+    image: '/administracao.jpeg',
     category: 'administração',
     modules: modulesInCourse('ADM', [
       'Fundamentos da Administração',
@@ -56,7 +56,7 @@ const courses = [
     hasAssessment: true,
     title: 'Gestão de Recursos Humanos',
     description: 'Recrutamento, desenvolvimento de equipes e rotinas de RH.',
-    image: '/1792417107155.webp',
+    image: '/rh.jpeg',
     category: 'recursos humanos rh',
     modules: modulesInCourse('RH', [
       'Fundamentos da Gestão de Recursos Humanos',
