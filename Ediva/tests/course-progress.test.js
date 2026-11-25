@@ -23,7 +23,7 @@ async function unusedPort() {
   return port
 }
 
-test('all courses without an assessment save sequential study progress without issuing certificates', { timeout: 45000 }, async t => {
+test('courses without an assessment save study progress without issuing certificates', { timeout: 45000 }, async t => {
   const directory = await mkdtemp(path.join(tmpdir(), 'ediva-course-progress-'))
   const port = await unusedPort()
   const origin = 'http://127.0.0.1:' + port
@@ -139,31 +139,31 @@ test('all courses without an assessment save sequential study progress without i
     }
   })
 
-  await t.test('rejects out-of-order modules, invalid bounds and foreign-origin writes without saving progress', async () => {
+  await t.test('rejects invalid bounds and foreign-origin writes without saving progress', async () => {
     for (const id of courseIds) {
       assert.equal((await complete(id, 0)).status, 400, id)
       assert.equal((await complete(id, 6)).status, 400, id)
-      assert.equal((await complete(id, 2)).status, 409, id)
       assert.equal((await complete(id, 1, { requestOrigin: 'https://unrelated.example.test' })).status, 403, id)
       assert.deepEqual((await request(coursePath(id))).body.progress.completedModules, [])
     }
   })
 
-  await t.test('saves all five modules in order for each course and keeps completed modules available for review', async () => {
+  await t.test('saves modules in any order and keeps progress separate by course', async () => {
     for (const [courseIndex, id] of courseIds.entries()) {
-      for (let number = 1; number <= 5; number++) {
+      const lastModuleFirst = await complete(id, 5)
+      assert.equal(lastModuleFirst.status, 200)
+      assert.deepEqual(lastModuleFirst.body.completedModules, [5])
+      assert.equal(lastModuleFirst.body.modulesCompletedAt, null)
+      assert.deepEqual((await complete(id, 5)).body.completedModules, [5], 'Repeated completion must not duplicate progress')
+      for (const nextCourse of courseIds.slice(courseIndex + 1)) {
+        assert.deepEqual((await request(coursePath(nextCourse))).body.progress.completedModules, [], 'Courses keep separate progress')
+      }
+      for (let number = 1; number < 5; number++) {
         const result = await complete(id, number)
         assert.equal(result.status, 200, id + ' module ' + number)
-        assert.deepEqual(result.body.completedModules, allModules.slice(0, number))
-        if (number < 5) assert.equal(result.body.modulesCompletedAt, null)
+        assert.deepEqual(result.body.completedModules, [...allModules.slice(0, number), 5])
+        if (number < 4) assert.equal(result.body.modulesCompletedAt, null)
         else assert.ok(Number.isSafeInteger(result.body.modulesCompletedAt) && result.body.modulesCompletedAt > 0)
-        if (number === 1) {
-          assert.equal((await complete(id, 3)).status, 409, 'An intermediate module cannot be skipped')
-          assert.deepEqual((await complete(id, 1)).body.completedModules, [1], 'Reopening a completed module must not duplicate progress')
-          for (const nextCourse of courseIds.slice(courseIndex + 1)) {
-            assert.deepEqual((await request(coursePath(nextCourse))).body.progress.completedModules, [], 'Courses keep separate progress')
-          }
-        }
       }
       const saved = await request(coursePath(id))
       assert.deepEqual(saved.body.progress.completedModules, allModules)
@@ -207,8 +207,7 @@ test('all courses without an assessment save sequential study progress without i
       assert.deepEqual(second.body.progress.completedModules, [])
       assert.equal(second.body.progress.assessment, null)
     }
-    assert.equal((await complete(courseIds[0], 2, { session: secondCookie })).status, 409)
-    assert.equal((await complete(courseIds[0], 1, { session: secondCookie })).status, 200)
+    assert.equal((await complete(courseIds[0], 2, { session: secondCookie })).status, 200)
     for (const id of courseIds) {
       assert.deepEqual((await request(coursePath(id))).body.progress.completedModules, allModules)
     }
@@ -225,7 +224,7 @@ test('all courses without an assessment save sequential study progress without i
       assert.equal(first.body.progress.assessment, null)
       const second = await request(coursePath(id), { session: secondCookie })
       assert.equal(second.status, 200)
-      assert.deepEqual(second.body.progress.completedModules, id === courseIds[0] ? [1] : [])
+      assert.deepEqual(second.body.progress.completedModules, id === courseIds[0] ? [2] : [])
       assert.equal(second.body.progress.assessment, null)
     }
   })

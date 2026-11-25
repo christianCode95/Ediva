@@ -14,13 +14,12 @@ export default function CourseLearningPage({ course }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [authRequired, setAuthRequired] = useState(false)
-  const [learningMessage, setLearningMessage] = useState('')
+  const [completionError, setCompletionError] = useState(null)
   const [completionMessage, setCompletionMessage] = useState('')
   const [focusTarget, setFocusTarget] = useState('')
   const [answers, setAnswers] = useState([])
   const [submitting, setSubmitting] = useState(false)
-  const [completingModule, setCompletingModule] = useState(false)
-  const [nextStudyMethod, setNextStudyMethod] = useState('pdf')
+  const [completingModule, setCompletingModule] = useState(null)
   const [result, setResult] = useState(null)
 
   useEffect(() => {
@@ -86,16 +85,10 @@ export default function CourseLearningPage({ course }) {
     }, [])
   }, [data])
 
-  function markModuleOpened(moduleNumber) {
-    setLearningMessage(
-      'O material do módulo ' + String(moduleNumber).padStart(2, '0')
-      + ' foi aberto em outra aba. Quando terminar, volte a esta página.',
-    )
-  }
-
-  async function completeModule(moduleNumber, studyMethod = 'pdf') {
-    setCompletingModule(true)
-    setError('')
+  async function completeModule(moduleNumber) {
+    if (completingModule !== null || completedModules.includes(moduleNumber)) return
+    setCompletingModule(moduleNumber)
+    setCompletionError(null)
     setCompletionMessage('')
     try {
       const response = await fetch('/api/courses/' + course.id + '/modules/' + moduleNumber + '/complete', {
@@ -108,33 +101,25 @@ export default function CourseLearningPage({ course }) {
         throw new Error(responseData.error || 'Não foi possível registrar a conclusão do módulo.')
       }
 
-      const nextModule = modules.find((module) => (
-        module.number > moduleNumber && !responseData.completedModules.includes(module.number)
-      ))
-      setNextStudyMethod(studyMethod)
       setData((current) => ({
         ...current,
         progress: {
           ...current.progress,
           completedModules: responseData.completedModules,
-          modulesCompletedAt: responseData.modulesCompletedAt ?? current.progress.modulesCompletedAt,
+          modulesCompletedAt: responseData.modulesCompletedAt,
         },
       }))
-      setLearningMessage('')
-      setCompletionMessage(nextModule
-        ? 'Módulo ' + String(moduleNumber).padStart(2, '0') + ' concluído. O próximo módulo já está liberado.'
-        : hasAssessment
-          ? 'Todos os módulos foram concluídos. O questionário final já está liberado.'
-          : 'Todos os módulos foram concluídos. Seu progresso está salvo na conta.')
-      setFocusTarget(nextModule
-        ? 'module-heading-' + nextModule.number
-        : hasAssessment ? 'assessment-heading' : 'modules-completion-heading')
-      return true
+      const message = 'Módulo ' + String(moduleNumber).padStart(2, '0') + ' concluído.'
+      setCompletionMessage(responseData.modulesCompletedAt && hasAssessment
+        ? message + ' O questionário final está disponível.'
+        : message)
     } catch (requestError) {
-      setError(requestError.message || 'Não foi possível conectar ao servidor.')
-      return false
+      setCompletionError({
+        moduleNumber,
+        message: requestError.message || 'Não foi possível salvar. Tente novamente.',
+      })
     } finally {
-      setCompletingModule(false)
+      setCompletingModule(null)
     }
   }
 
@@ -209,23 +194,12 @@ export default function CourseLearningPage({ course }) {
 
   const assessment = data.progress.assessment
   const certificateAvailable = hasAssessment && Boolean(assessment?.completedAt && assessment?.certificateId)
-  const activeModuleNumber = modules.find((module) => !completedModules.includes(module.number))?.number
   const progressPercent = modules.length ? Math.round((completedModules.length / modules.length) * 100) : 0
 
   return (
     <CourseStudyLayout
       course={course}
-      intro={
-        <>
-          Estude os módulos em ordem pelo PDF ou pela videoaula opcional. Pelo PDF, confirme quando terminar de estudar.
-          Pelo vídeo, a conclusão é automática ao terminar a aula.
-          {hasAssessment
-            ? ' Ao concluir todos os módulos, responda ao questionário final.'
-            : ' Ao concluir todos os módulos, seu estudo ficará registrado na conta.'}
-          {' '}
-          Você pode voltar aos conteúdos para revisar quando quiser.
-        </>
-      }
+      intro="Escolha por onde começar e estude no seu ritmo. Marque os módulos como concluídos para salvar seu progresso."
     >
         <section className="learning-progress" aria-labelledby="progress-heading">
           <div className="learning-progress-heading">
@@ -243,52 +217,53 @@ export default function CourseLearningPage({ course }) {
           >
             <span aria-hidden="true" style={{ width: progressPercent + '%' }} />
           </div>
+          {hasAssessment && (
+            allModulesCompleted ? (
+              <a className="learning-text-link learning-assessment-link" href={certificateAvailable ? '#certificate-heading' : '#assessment-heading'}>
+                {certificateAvailable ? 'Ver certificado' : 'Ir para o questionário final'}
+              </a>
+            ) : (
+              <p className="learning-section-help learning-assessment-link">Marque todos os módulos como concluídos para abrir o questionário final.</p>
+            )
+          )}
         </section>
 
         {error && <p className="learning-error" role="alert">{error}</p>}
-        {completionMessage && <p className="learning-success" role="status">{completionMessage}</p>}
-        {learningMessage && <p className="learning-reminder" role="status">{learningMessage}</p>}
+        <p className="sr-only" role="status">{completionMessage}</p>
 
         <section className="learning-modules" aria-labelledby="learning-modules-heading">
           <h2 id="learning-modules-heading">Módulos do curso</h2>
-          <p className="learning-section-help">
-            Escolha o formato que preferir em cada módulo. Você pode concluir pelo PDF sem assistir à videoaula.
-          </p>
-          <ol aria-label="Etapas do curso">
+          <nav className="learning-module-shortcuts" aria-label="Ir para um módulo">
+            {modules.map((module) => (
+              <a
+                key={module.number}
+                href={'#module-heading-' + module.number}
+                aria-label={'Módulo ' + module.number + ' — ' + module.title}
+              >
+                {String(module.number).padStart(2, '0')}
+              </a>
+            ))}
+          </nav>
+          <ol aria-label="Módulos">
             {modules.map((module) => {
               const isCompleted = completedModules.includes(module.number)
-              const isActive = module.number === activeModuleNumber
-              const isUnlocked = module.number === 1 || completedModules.includes(module.number - 1)
-              const moduleStatus = isCompleted
-                ? 'Concluído · disponível para estudar novamente'
-                : isActive
-                  ? 'Disponível para estudar'
-                  : 'Bloqueado · conclua o módulo anterior para liberar'
 
               return (
                 <CourseModuleCard
                   key={module.number}
                   module={module}
                   isCompleted={isCompleted}
-                  isUnlocked={isUnlocked}
-                  isActive={isActive}
-                  status={moduleStatus}
                 >
-                  {isUnlocked && (
-                    <ModuleStudyMaterials
-                      courseId={course.id}
-                      module={module}
-                      isActive={isActive}
-                      isCompleted={isCompleted}
-                      isLastModule={module.number === modules.at(-1).number}
-                      hasAssessment={hasAssessment}
-                      initialMethod={nextStudyMethod}
-                      completing={completingModule}
-                      onComplete={completeModule}
-                      onPdfOpen={markModuleOpened}
-                      allowDownload={!hasAssessment}
-                    />
-                  )}
+                  <ModuleStudyMaterials
+                    courseId={course.id}
+                    module={module}
+                    isCompleted={isCompleted}
+                    completing={completingModule === module.number}
+                    completionDisabled={completingModule !== null}
+                    completionError={completionError?.moduleNumber === module.number ? completionError.message : undefined}
+                    onComplete={completeModule}
+                    allowDownload={!hasAssessment}
+                  />
                 </CourseModuleCard>
               )
             })}

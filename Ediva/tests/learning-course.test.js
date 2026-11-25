@@ -150,20 +150,23 @@ test('Aprender a Aprender unlocks its assessment after five modules, supports re
     }
   })
 
-  await t.test('requires all five modules in order before opening the assessment', async () => {
+  await t.test('allows completion in any order and requires all five modules for the assessment', async () => {
     assert.equal((await assess(expectedAnswers)).status, 409)
     assert.equal((await complete(0)).status, 400)
     assert.equal((await complete(6)).status, 400)
-    assert.equal((await complete(2)).status, 409)
-    for (let number = 1; number <= 4; number++) {
+    const lastModuleFirst = await complete(5)
+    assert.equal(lastModuleFirst.status, 200)
+    assert.deepEqual(lastModuleFirst.body.completedModules, [5])
+    assert.equal(lastModuleFirst.body.modulesCompletedAt, null)
+    for (let number = 1; number <= 3; number++) {
       const response = await complete(number)
       assert.equal(response.status, 200)
-      assert.deepEqual(response.body.completedModules, allModules.slice(0, number))
+      assert.deepEqual(response.body.completedModules, [...allModules.slice(0, number), 5])
       assert.equal(response.body.modulesCompletedAt, null)
     }
-    assert.equal((await assess(expectedAnswers)).status, 409)
-    assert.deepEqual((await complete(1)).body.completedModules, [1, 2, 3, 4])
-    const finalModule = await complete(5)
+    assert.equal((await assess(expectedAnswers)).status, 409, 'Marking module 5 does not unlock the assessment while module 4 is pending')
+    assert.deepEqual((await complete(5)).body.completedModules, [1, 2, 3, 5])
+    const finalModule = await complete(4)
     assert.equal(finalModule.status, 200)
     assert.deepEqual(finalModule.body.completedModules, allModules)
     assert.ok(Number.isSafeInteger(finalModule.body.modulesCompletedAt))

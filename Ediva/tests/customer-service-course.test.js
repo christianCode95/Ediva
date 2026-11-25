@@ -23,7 +23,7 @@ async function unusedPort() {
   return port
 }
 
-test('Atendimento ao Cliente saves ten ordered study modules without issuing an empty assessment certificate', { timeout: 30000 }, async t => {
+test('Atendimento ao Cliente saves ten study modules without issuing an empty assessment certificate', { timeout: 30000 }, async t => {
   const directory = await mkdtemp(path.join(tmpdir(), 'ediva-customer-service-'))
   const origin = 'http://127.0.0.1:' + await unusedPort()
   let child, childExited, output = '', cookie = '', secondCookie = '', completedAt
@@ -125,23 +125,24 @@ test('Atendimento ao Cliente saves ten ordered study modules without issuing an 
     assert.equal((await assess()).status, 404)
   })
 
-  await t.test('rejects invalid bounds, skipped modules and foreign-origin writes', async () => {
+  await t.test('rejects invalid bounds and foreign-origin writes', async () => {
     assert.equal((await complete(0)).status, 400)
     assert.equal((await complete(11)).status, 400)
-    assert.equal((await complete(2)).status, 409)
-    assert.equal((await complete(10)).status, 409)
     assert.equal((await complete(1, { requestOrigin: 'https://unrelated.example.test' })).status, 403)
     assert.deepEqual((await request(coursePath)).body.progress.completedModules, [])
   })
 
-  await t.test('saves modules in order, supports review and keeps other courses independent', async () => {
-    for (const number of allModules) {
+  await t.test('saves modules in any order, supports review and keeps other courses independent', async () => {
+    const lastModuleFirst = await complete(10)
+    assert.equal(lastModuleFirst.status, 200)
+    assert.deepEqual(lastModuleFirst.body.completedModules, [10])
+    assert.equal(lastModuleFirst.body.modulesCompletedAt, null)
+    for (const number of allModules.slice(0, -1)) {
       const result = await complete(number)
       assert.equal(result.status, 200, 'module ' + number)
-      assert.deepEqual(result.body.completedModules, allModules.slice(0, number))
-      if (number < 10) assert.equal(result.body.modulesCompletedAt, null)
+      assert.deepEqual(result.body.completedModules, [...allModules.slice(0, number), 10])
+      if (number < 9) assert.equal(result.body.modulesCompletedAt, null)
       else completedAt = result.body.modulesCompletedAt
-      if (number < 9) assert.equal((await complete(number + 2)).status, 409, 'Skipping an intermediate module must fail')
     }
     assert.ok(Number.isSafeInteger(completedAt) && completedAt > 0)
     for (const number of [1, 5, 10]) {
@@ -175,8 +176,7 @@ test('Atendimento ao Cliente saves ten ordered study modules without issuing an 
     assert.equal(registered.status, 201)
     secondCookie = registered.headers.get('set-cookie').split(';')[0]
     assert.deepEqual((await request(coursePath, { session: secondCookie })).body.progress.completedModules, [])
-    assert.equal((await complete(2, { session: secondCookie })).status, 409)
-    assert.equal((await complete(1, { session: secondCookie })).status, 200)
+    assert.equal((await complete(2, { session: secondCookie })).status, 200)
     assert.deepEqual((await request(coursePath)).body.progress.completedModules, allModules)
   })
 
@@ -190,7 +190,7 @@ test('Atendimento ao Cliente saves ten ordered study modules without issuing an 
     assert.equal(saved.body.progress.assessment, null)
     const second = await request(coursePath, { session: secondCookie })
     assert.equal(second.status, 200)
-    assert.deepEqual(second.body.progress.completedModules, [1])
+    assert.deepEqual(second.body.progress.completedModules, [2])
     assert.equal(second.body.progress.modulesCompletedAt, null)
     assert.equal(second.body.progress.assessment, null)
   })

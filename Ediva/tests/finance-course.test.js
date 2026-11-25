@@ -151,23 +151,27 @@ test('financial assessment unlocks after ten modules, supports review and persis
     assert.equal((await request('/api/courses/unknown-course')).status, 404)
   })
 
-  await t.test('requires all modules in order and handles repeated completion once', async () => {
+  await t.test('allows completion in any order and requires every module for the assessment', async () => {
     assert.equal((await assess(expectedAnswers)).status, 409)
     assert.equal((await complete(0)).status, 400)
     assert.equal((await complete(11)).status, 400)
-    assert.equal((await complete(2)).status, 409)
-    for (let number = 1; number <= 9; number++) {
+    const lastModuleFirst = await complete(10)
+    assert.equal(lastModuleFirst.status, 200)
+    assert.deepEqual(lastModuleFirst.body.completedModules, [10])
+    assert.equal(lastModuleFirst.body.modulesCompletedAt, null)
+    for (let number = 1; number <= 8; number++) {
       const result = await complete(number)
       assert.equal(result.status, 200)
-      assert.deepEqual(result.body.completedModules, Array.from({ length: number }, (_, index) => index + 1))
+      assert.deepEqual(result.body.completedModules, [...Array.from({ length: number }, (_, index) => index + 1), 10])
     }
-    assert.equal((await assess(expectedAnswers)).status, 409, 'Nine modules do not unlock the assessment')
-    const repeated = await complete(1)
+    assert.equal((await assess(expectedAnswers)).status, 409, 'Marking module 10 does not unlock the assessment while module 9 is pending')
+    const repeated = await complete(10)
     assert.equal(repeated.status, 200)
     assert.equal(repeated.body.completedModules.length, 9)
-    const finalModule = await complete(10)
+    const finalModule = await complete(9)
     assert.equal(finalModule.status, 200)
     assert.equal(finalModule.body.completedModules.length, 10)
+    assert.ok(Number.isSafeInteger(finalModule.body.modulesCompletedAt))
   })
 
   await t.test('rejects incomplete answers and maps mistakes to the modules to review', async () => {

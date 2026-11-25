@@ -546,16 +546,8 @@ const server = createServer(async (request, response) => {
 
       if (moduleNumberText) {
         const moduleNumber = Number(moduleNumberText)
-        if (!Number.isInteger(moduleNumber) || moduleNumber < 1 || moduleNumber > course.modules.length) {
+        if (!course.modules.some((module) => module.number === moduleNumber)) {
           sendJson(response, 400, { error: 'Módulo inválido.' })
-          return
-        }
-
-        const completedModules = listCourseModuleProgress.all(user.id, courseId)
-        const previousModulesCompleted = Array.from({ length: moduleNumber - 1 }, (_, index) => index + 1)
-          .every((number) => completedModules.some((item) => item.module_number === number))
-        if (!previousModulesCompleted) {
-          sendJson(response, 409, { error: 'Conclua os módulos anteriores antes de avançar.' })
           return
         }
 
@@ -575,9 +567,9 @@ const server = createServer(async (request, response) => {
         return
       }
 
-      const completedModules = listCourseModuleProgress.all(user.id, courseId)
-      if (completedModules.length !== course.modules.length) {
-        sendJson(response, 409, { error: 'Conclua todos os módulos antes de fazer o questionário.' })
+      const progress = moduleProgress(course, listCourseModuleProgress.all(user.id, courseId))
+      if (progress.modulesCompletedAt === null) {
+        sendJson(response, 409, { error: 'Marque todos os módulos como concluídos para fazer o questionário.' })
         return
       }
 
