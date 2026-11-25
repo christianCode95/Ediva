@@ -146,11 +146,24 @@ export const courseCatalog = [
     ]
   },
   {
+    "id": "atendimento-ao-cliente",
     "title": "Atendimento ao Cliente",
     "description": "Do primeiro contato à fidelização.",
     "image": "/atendimento-ao-cliente.jpeg",
     "category": "atendimento cliente",
-    "moduleTitles": []
+    "folder": "ATENDIMENTO AO CLIENTE",
+    "moduleTitles": [
+      "Fundamentos do Atendimento ao Cliente",
+      "Comunicação e Escuta Ativa",
+      "Atendimento Presencial",
+      "Atendimento por Telefone",
+      "Atendimento Digital: WhatsApp, Chat, E-mail e Redes Sociais",
+      "Vendas no Atendimento",
+      "Reclamações e Situações Difíceis",
+      "Direitos do Consumidor no Atendimento",
+      "Pós-venda, Fidelização e Indicadores de Qualidade",
+      "Postura Profissional, Emoções e Carreira"
+    ]
   },
   {
     "title": "Marketing Digital",

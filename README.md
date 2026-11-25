@@ -19,7 +19,7 @@ O banco é criado em `Ediva/data/ediva.sqlite`. Para configurar outro caminho, c
 
 - `/cadastro`: cria uma conta e inicia a sessão sem enviar ou pedir confirmação de e-mail. E-mails fictícios, como `teste@exemplo.com`, são aceitos.
 - `/entrar`: autentica uma conta existente.
-- `/conta`: mostra os dados do aluno, oferece os oito cursos com materiais e progresso salvo e permite encerrar a sessão.
+- `/conta`: mostra os dados do aluno, oferece os nove cursos com materiais e progresso salvo e permite encerrar a sessão.
 - `/privacidade`: explica os dados tratados pela área de contas.
 
 As senhas são armazenadas com Argon2id. A sessão usa cookie `HttpOnly`, `SameSite=Lax` e, em produção, `Secure`. O banco guarda o hash do token de sessão, não o token original.

@@ -22,6 +22,7 @@ const routes = [
   'estudar/aprender-a-aprender',
   'estudar/psicologia-no-trabalho',
   'estudar/inteligencia-artificial',
+  'estudar/atendimento-ao-cliente',
 ]
 
 for (const route of routes) {
