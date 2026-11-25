@@ -134,7 +134,7 @@ test('all courses without an assessment save sequential study progress without i
       assert.equal(result.body.progress.assessment, null)
       assert.equal((await assess(id)).status, 404, 'An empty question list must never create an assessment')
     }
-    for (const unknown of ['constructor', 'unknown-course', 'marketing-digital']) {
+    for (const unknown of ['constructor', 'unknown-course', 'informatica-basica']) {
       assert.equal((await request(coursePath(unknown))).status, 404)
     }
   })
@@ -185,7 +185,7 @@ test('all courses without an assessment save sequential study progress without i
       assert.equal(saved.assessment, null)
       assert.equal(saved.certificateId, undefined)
     }
-    for (const [id, questionCount] of Object.entries({ adm: 90, rh: 30, 'auxiliar-financeiro': 30, 'inteligencia-artificial': 25, 'aprender-a-aprender': 15, 'psicologia-no-trabalho': 15 })) {
+    for (const [id, questionCount] of Object.entries({ adm: 90, rh: 30, 'auxiliar-financeiro': 30, 'inteligencia-artificial': 25, 'aprender-a-aprender': 15, 'psicologia-no-trabalho': 15, 'marketing-digital': 50 })) {
       const assessed = await request(coursePath(id))
       assert.equal(assessed.status, 200)
       assert.equal(assessed.body.course.hasAssessment, true)

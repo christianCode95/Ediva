@@ -166,11 +166,26 @@ export const courseCatalog = [
     ]
   },
   {
+    "id": "marketing-digital",
+    "hasAssessment": true,
     "title": "Marketing Digital",
     "description": "Estratégias para atrair clientes e construir sua marca.",
     "image": "/marketing-digital.jpeg",
     "category": "marketing digital",
-    "moduleTitles": []
+    "folder": "MARKETING",
+    "moduleTitles": [
+      "Fundamentos do marketing digital",
+      "Público-alvo, persona e posicionamento",
+      "Redes sociais: perfis e formatos",
+      "Criação de conteúdo e calendário editorial",
+      "WhatsApp Business e atendimento digital",
+      "Google: Perfil da Empresa, site e SEO",
+      "Anúncios pagos: Meta e Google",
+      "E-mail marketing e relacionamento",
+      "Métricas e relatórios",
+      "Ética, leis e carreira"
+    ],
+    "videoPendingModules": [5]
   },
   {
     "title": "Informática Básica",

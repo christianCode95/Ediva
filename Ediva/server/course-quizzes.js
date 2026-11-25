@@ -2,12 +2,14 @@ import { auxiliarFinanceiroQuiz } from './finance-quiz.js'
 import { inteligenciaArtificialQuiz } from './ia-quiz.js'
 import { aprenderAprenderQuiz } from './learning-quiz.js'
 import { psicologiaTrabalhoQuiz } from './psychology-quiz.js'
+import { marketingDigitalQuiz } from './marketing-quiz.js'
 
 export const courseQuizzes = {
   'auxiliar-financeiro': auxiliarFinanceiroQuiz,
   'inteligencia-artificial': inteligenciaArtificialQuiz,
   'aprender-a-aprender': aprenderAprenderQuiz,
   'psicologia-no-trabalho': psicologiaTrabalhoQuiz,
+  'marketing-digital': marketingDigitalQuiz,
   "adm": {
     "title": "Administra\u00e7\u00e3o",
     "modules": [

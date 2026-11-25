@@ -29,6 +29,7 @@ const pageTitles = {
   '/estudar/psicologia-no-trabalho': 'Estudar Psicologia no Trabalho',
   '/estudar/inteligencia-artificial': 'Estudar Inteligência Artificial',
   '/estudar/atendimento-ao-cliente': 'Estudar Atendimento ao Cliente',
+  '/estudar/marketing-digital': 'Estudar Marketing Digital',
   '/privacidade': 'Privacidade',
 }
 const courses = courseCatalog.map(({ folder, moduleTitles, videoPendingModules = [], ...course }) => ({
