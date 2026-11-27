@@ -81,6 +81,7 @@ export const courseCatalog = [
   },
   {
     "id": "politica",
+    "hasAssessment": true,
     "title": "Política e Cidadania",
     "description": "Conceitos políticos, pensamento crítico e participação cidadã.",
     "image": "/politica.jpeg",
@@ -92,7 +93,33 @@ export const courseCatalog = [
       "Ideologias e Sistemas Políticos",
       "Como Funciona a Política Brasileira",
       "Pensamento Crítico e Participação Cidadã"
-    ]
+    ],
+    "assessmentReviewSources": {
+      "1": [
+        { "label": "Fundamentos da Política, páginas 7–8, 12–13 e 17", "moduleNumber": 1, "page": 7 },
+        { "label": "Constituição Federal, arts. 1º, 6º e 14", "url": "https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm" },
+        { "label": "Participação cidadã e ouvidoria (CGU)", "url": "https://www.gov.br/acessoainformacao/pt-br/falabr/visao-geral" }
+      ],
+      "2": [
+        { "label": "Como Funciona a Política Brasileira, páginas 3–4 e 18", "moduleNumber": 4, "page": 3 },
+        { "label": "Constituição Federal de 1988, art. 5º", "url": "https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm" }
+      ],
+      "3": [
+        { "label": "Como Funciona a Política Brasileira, páginas 4–8", "moduleNumber": 4, "page": 4 },
+        { "label": "Constituição Federal, arts. 2º, 29, 44, 46 e 102", "url": "https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm" }
+      ],
+      "4": [
+        { "label": "Pensamento Crítico e Participação Cidadã, páginas 7–9 e 15–18", "moduleNumber": 5, "page": 7 },
+        { "label": "Constituição Federal, arts. 14 e 61", "url": "https://www.planalto.gov.br/ccivil_03/constituicao/constituicao.htm" },
+        { "label": "Plebiscitos e referendos (TSE)", "url": "https://www.tse.jus.br/eleicoes/plebiscitos-e-referendos" }
+      ],
+      "5": [
+        { "label": "Pensamento Crítico e Participação Cidadã, páginas 7–9 e 15–18", "moduleNumber": 5, "page": 7 },
+        { "label": "Acesso à informação e ouvidoria (CGU)", "url": "https://www.gov.br/acessoainformacao/pt-br/falabr/visao-geral" },
+        { "label": "Orientações ao consumidor (Procon-SP)", "url": "https://www.procon.sp.gov.br/espaco-consumidor/" },
+        { "label": "Assédio moral no trabalho (MPT)", "url": "https://mpt.mp.br/pgt/fale-com-o-mpt/perguntas-e-respostas-frequentes" }
+      ]
+    }
   },
   {
     "id": "aprender-a-aprender",
@@ -147,6 +174,7 @@ export const courseCatalog = [
   },
   {
     "id": "atendimento-ao-cliente",
+    "hasAssessment": true,
     "title": "Atendimento ao Cliente",
     "description": "Do primeiro contato à fidelização.",
     "image": "/atendimento-ao-cliente.jpeg",

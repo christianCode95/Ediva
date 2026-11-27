@@ -193,6 +193,11 @@ export default function CourseLearningPage({ course }) {
   }
 
   const assessment = data.progress.assessment
+  const reviewSources = course.assessmentReviewSources
+  const failedGroups = assessment?.failedModules ?? []
+  const topicsToReview = failedGroups.length
+    ? moduleGroups.filter((group) => failedGroups.includes(group.number))
+    : moduleGroups
   const certificateAvailable = hasAssessment && Boolean(assessment?.completedAt && assessment?.certificateId)
   const progressPercent = modules.length ? Math.round((completedModules.length / modules.length) * 100) : 0
 
@@ -285,17 +290,46 @@ export default function CourseLearningPage({ course }) {
             <h2 id="assessment-heading" tabIndex="-1">Questionário final</h2>
             <p className="learning-assessment-intro">
               São {data.course.questions.length} questões de múltipla escolha. O curso é concluído quando você
-              acerta todas. Se errar, indicaremos quais módulos revisar. Você pode estudar esses módulos novamente
-              e refazer a avaliação.
+              acerta todas.
+              {reviewSources
+                ? ' Se errar, indicaremos quais temas revisar antes de uma nova tentativa.'
+                : ' Se errar, indicaremos quais módulos revisar antes de uma nova tentativa.'}
               {assessment?.attempts ? ' Tentativas anteriores: ' + assessment.attempts + '.' : ''}
             </p>
 
-            {assessment?.failedModules?.length > 0 && (
+            {reviewSources && (
+              <details className="learning-review-list learning-topic-review" open={failedGroups.length > 0}>
+                <summary>{failedGroups.length ? 'Temas para revisar' : 'Leituras para a avaliação'}</summary>
+                <ul>
+                  {topicsToReview.map((group) => (
+                    <li key={group.number}>
+                      <strong>{group.title}</strong>
+                      <ul>
+                        {reviewSources[group.number]?.map(({ label, url, moduleNumber, page }) => {
+                          const pdf = modules.find((module) => module.number === moduleNumber)?.url
+                          const href = pdf ? pdf + '#page=' + page : url
+                          if (!href) return null
+                          return (
+                            <li key={label}>
+                              <a href={href} target="_blank" rel="noopener noreferrer">
+                                {label} <span className="learning-new-tab">(nova aba)</span>
+                              </a>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
+            {!reviewSources && failedGroups.length > 0 && (
               <div className="learning-review-list" aria-labelledby="review-heading">
                 <h3 id="review-heading">Módulos para revisar</h3>
                 <p>Revise o conteúdo indicado antes de tentar o questionário novamente.</p>
                 <ul>
-                  {assessment.failedModules.map((moduleNumber) => {
+                  {failedGroups.map((moduleNumber) => {
                     const module = modules.find((item) => item.number === moduleNumber)
                     if (!module) return null
                     return (
@@ -320,7 +354,7 @@ export default function CourseLearningPage({ course }) {
             {result && !result.passed && (
               <div className="learning-result" id="assessment-result" role="status" tabIndex="-1">
                 <p>
-                  Você acertou {result.score} de {result.total} questões. Revise os módulos indicados e tente novamente.
+                  Você acertou {result.score} de {result.total} questões. Revise os {reviewSources ? 'temas' : 'módulos'} indicados e tente novamente.
                 </p>
                 <a href="#assessment-form">Ir para uma nova tentativa</a>
               </div>
@@ -329,7 +363,7 @@ export default function CourseLearningPage({ course }) {
             <form id="assessment-form" onSubmit={submitAssessment}>
               {moduleGroups.map((group) => (
                 <fieldset className="learning-question-group" key={group.number}>
-                  <legend>Módulo {String(group.number).padStart(2, '0')} — {group.title}</legend>
+                  <legend>{reviewSources ? group.title : `Módulo ${String(group.number).padStart(2, '0')} — ${group.title}`}</legend>
                   {group.questions.map((question, questionIndex) => (
                     <fieldset className="learning-question" key={group.number + '-' + questionIndex}>
                       <legend>{questionIndex + 1}. {question.text}</legend>

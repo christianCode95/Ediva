@@ -459,6 +459,21 @@
   font-size: 17px;
 }
 
+.learning-topic-review summary {
+  color: #32117e;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.learning-topic-review summary:focus-visible {
+  outline: 3px solid #6424c2;
+  outline-offset: 3px;
+}
+
+.learning-topic-review > ul > li + li {
+  margin-top: 10px;
+}
+
 .learning-review-list p {
   margin: 0;
   color: #51466b;

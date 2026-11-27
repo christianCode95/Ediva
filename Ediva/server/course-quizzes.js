@@ -3,6 +3,8 @@ import { inteligenciaArtificialQuiz } from './ia-quiz.js'
 import { aprenderAprenderQuiz } from './learning-quiz.js'
 import { psicologiaTrabalhoQuiz } from './psychology-quiz.js'
 import { marketingDigitalQuiz } from './marketing-quiz.js'
+import { atendimentoAoClienteQuiz } from './customer-service-quiz.js'
+import { politicaCidadaniaQuiz } from './politics-quiz.js'
 
 export const courseQuizzes = {
   'auxiliar-financeiro': auxiliarFinanceiroQuiz,
@@ -10,6 +12,8 @@ export const courseQuizzes = {
   'aprender-a-aprender': aprenderAprenderQuiz,
   'psicologia-no-trabalho': psicologiaTrabalhoQuiz,
   'marketing-digital': marketingDigitalQuiz,
+  'atendimento-ao-cliente': atendimentoAoClienteQuiz,
+  politica: politicaCidadaniaQuiz,
   "adm": {
     "title": "Administra\u00e7\u00e3o",
     "modules": [
