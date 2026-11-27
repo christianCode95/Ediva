@@ -68,7 +68,7 @@ export const courseCatalog = [
     "id": "primeiro-emprego",
     "title": "Primeiro Emprego",
     "description": "Prepare seu currículo, entrevistas e próximos passos profissionais.",
-    "image": "/primeiro-emprego.jpeg",
+    "image": "/primeiro-emprego.png",
     "category": "primeiro emprego carreira currículo",
     "folder": "PRIMEIRO EMPREGO",
     "moduleTitles": [
@@ -177,7 +177,7 @@ export const courseCatalog = [
     "hasAssessment": true,
     "title": "Atendimento ao Cliente",
     "description": "Do primeiro contato à fidelização.",
-    "image": "/atendimento-ao-cliente.jpeg",
+    "image": "/atendimento-ao-cliente.png",
     "category": "atendimento cliente",
     "folder": "ATENDIMENTO AO CLIENTE",
     "moduleTitles": [
